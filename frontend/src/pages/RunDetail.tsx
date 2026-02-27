@@ -14,8 +14,9 @@ import { StatusBadge } from "../components/StatusBadge.js";
 import { NodeList } from "../components/NodeList.js";
 import { EventLog } from "../components/EventLog.js";
 import { HumanGateModal } from "../components/HumanGateModal.js";
+import { BarsChart } from "../components/BarsChart.js";
 
-type Tab = "nodes" | "logs" | "events" | "dot" | "context";
+type Tab = "nodes" | "bars" | "logs" | "events" | "dot" | "context";
 
 export default function RunDetail() {
   const params = useParams<{ id: string }>();
@@ -159,12 +160,13 @@ export default function RunDetail() {
             {/* Tabs */}
             <div class="card">
               <div class="tabs">
-                {(["nodes", "logs", "events", "dot"] as Tab[]).map((t) => (
+                {(["nodes", "bars", "logs", "events", "dot"] as Tab[]).map((t) => (
                   <div
                     class={`tab${tab() === t ? " active" : ""}`}
                     onClick={() => setTab(t)}
                   >
                     {t === "nodes" && "Nodes"}
+                    {t === "bars" && "Bars"}
                     {t === "logs" && `Logs (${Object.keys(nodeLogs()).length})`}
                     {t === "events" && `Events (${events().length})`}
                     {t === "dot" && "DOT Source"}
@@ -174,6 +176,10 @@ export default function RunDetail() {
 
               <Show when={tab() === "nodes"}>
                 <NodeList run={r()} />
+              </Show>
+
+              <Show when={tab() === "bars"}>
+                <BarsChart run={r()} />
               </Show>
 
               <Show when={tab() === "logs"}>
