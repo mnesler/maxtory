@@ -1,0 +1,11 @@
+// Simple hello-world pipeline — demonstrates start → codergen → exit flow
+digraph hello_world {
+  graph [goal="Generate and print a hello-world greeting"]
+
+  start  [shape=Mdiamond, label="Start"]
+  greet  [shape=box,      label="Greet",  prompt="Write a short friendly greeting"]
+  done   [shape=Msquare,  label="Done"]
+
+  start -> greet
+  greet -> done
+}

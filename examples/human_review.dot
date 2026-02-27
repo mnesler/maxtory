@@ -1,0 +1,18 @@
+// Human-in-the-loop pipeline — a conditional branch requiring human decision
+digraph human_review {
+  graph [goal="Draft a document and have a human approve or reject it"]
+
+  start   [shape=Mdiamond,    label="Start"]
+  draft   [shape=box,         label="Draft",   prompt="Write a short one-paragraph product announcement"]
+  review  [shape=hexagon,     label="Review",  choices="approve:Approve the draft,reject:Reject and revise"]
+  revise  [shape=box,         label="Revise",  prompt="Revise the draft based on reviewer feedback"]
+  publish [shape=parallelogram, label="Publish", tool="log"]
+  done    [shape=Msquare,     label="Done"]
+
+  start  -> draft
+  draft  -> review
+  review -> publish [label="approve"]
+  review -> revise  [label="reject"]
+  revise -> review
+  publish -> done
+}

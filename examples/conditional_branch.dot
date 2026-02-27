@@ -1,0 +1,18 @@
+// Conditional branching pipeline — uses outcome labels to route flow
+digraph conditional_branch {
+  graph [goal="Classify input and route to the appropriate handler"]
+
+  start     [shape=Mdiamond,  label="Start"]
+  classify  [shape=box,       label="Classify",  prompt="Classify the following as 'simple' or 'complex': What is 2+2?"]
+  simple    [shape=box,       label="Simple",    prompt="Answer the question directly in one sentence"]
+  complex   [shape=box,       label="Complex",   prompt="Provide a detailed multi-step explanation"]
+  gate      [shape=diamond,   label="Gate"]
+  done      [shape=Msquare,   label="Done"]
+
+  start    -> classify
+  classify -> gate
+  gate     -> simple  [label="simple"]
+  gate     -> complex [label="complex"]
+  simple   -> done
+  complex  -> done
+}
