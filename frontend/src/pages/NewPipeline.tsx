@@ -27,7 +27,7 @@ export default function NewPipeline() {
   return (
     <>
       <div class="topbar">
-        <h2>New Pipeline</h2>
+        <h2>Agent</h2>
       </div>
       <div class="content">
         <form onSubmit={handleSubmit}>

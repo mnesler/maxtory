@@ -223,5 +223,81 @@
     "startedAt": "2026-02-27T02:07:59.588Z",
     "logsRoot": "logs/0aa36192-606e-4b98-a7c6-4f5971caaed4",
     "completedAt": "2026-02-27T02:09:18.382Z"
+  },
+  {
+    "id": "2a912976-d454-4156-8b7d-acf4d27167e8",
+    "dotSource": "digraph TabRenamingWorkflow {\n  graph [goal=\"Rename the pipeline’s New Pipeline tab to Agent\"];\n  start  [shape=Mdiamond, label=\"Start\"];\n  rename [shape=box,  label=\"tab_rename\", prompt=\"Generate JavaScript code that renames ‘New Pipeline’ → ‘Agent’ in both the tab identifier and visible title so all downstream references match.\"];\n  verify [shape=box,  label=\"qa_check\",   prompt=\"Run unit tests to confirm all automation breakpoints, callbacks, and DOM selectors now target the updated 'Agent' tab.\"];\n  update [shape=box,  label=\"docs_update\",prompt=\"Update documentation, user guides, and video walkthroughs to use the new 'Agent' tab name throughout screenshots and instructions.\"];\n  done   [shape=Msquare, label=\"Done\"];\n  \n  start -> rename -> verify -> update -> done;\n}",
+    "graphId": "TabRenamingWorkflow",
+    "graphGoal": "Rename the pipeline’s New Pipeline tab to Agent",
+    "model": "moonshotai/kimi-k2",
+    "status": "COMPLETED",
+    "completedNodes": [
+      "start",
+      "rename",
+      "verify",
+      "update"
+    ],
+    "nodeOutcomes": {
+      "start": {
+        "status": "SUCCESS",
+        "notes": "Pipeline started"
+      },
+      "rename": {
+        "status": "SUCCESS",
+        "notes": "Stage completed: rename",
+        "contextUpdates": {
+          "last_stage": "rename",
+          "last_response": "```javascript\n// Stage-Rename-Agent.js\n// Run once after the tab is created.\n(() => {\n  const OLD_TAB_ID = \"editor.new_pipeline\"; // tab identifier used in route paths, redux, and URL args\n  const NEW"
+        }
+      },
+      "verify": {
+        "status": "SUCCESS",
+        "notes": "Stage completed: verify",
+        "contextUpdates": {
+          "last_stage": "verify",
+          "last_response": "```bash\n# 1. Update snapshots + unit tests\nnpm test -- --updateSnapshot --testPathPattern=\"spec|unit\" --testNamePattern=\"tab|Tab|Agent\"\n\n# 2. Key assertions to verify\n#    ✓ Breakpoint identifiers no "
+        }
+      },
+      "update": {
+        "status": "SUCCESS",
+        "notes": "Stage completed: update",
+        "contextUpdates": {
+          "last_stage": "update",
+          "last_response": "Below is a consolidated checklist you can hand to every content owner (Docs, UI/UX, Video, L10n) so the switch from “New Pipeline” to “Agent” is reflected everywhere your users look. Treat it as a one"
+        }
+      }
+    },
+    "startedAt": "2026-02-27T02:12:49.665Z",
+    "logsRoot": "logs/2a912976-d454-4156-8b7d-acf4d27167e8",
+    "completedAt": "2026-02-27T02:13:37.396Z"
+  },
+  {
+    "id": "89872524-21ad-47cd-91fa-32a81c55c091",
+    "dotSource": "digraph RenameNewPipelineToAgent {\n    graph [goal=\"Rename the UI tab 'New Pipeline' to 'Agent'\"]\n    \n    Start [shape=Mdiamond label=\"Start\"]\n    \n    IdentifyTab [shape=box \n        prompt=\"Locate the component or template that renders/labels the 'New Pipeline' tab in the codebase, including any localization files, navigation menus, or UI strings\"]\n    \n    UpdateLabel [shape=box \n        prompt=\"Replace every occurrence of the string 'New Pipeline' with 'Agent' in the identified files, ensuring consistency across UI code, tests, documentation, and localization resources\"]\n    \n    TestDisplay [shape=box \n        prompt=\"Manually open the UI, navigate to the tab section, and confirm that 'Agent' now appears instead of 'New Pipeline'; also run any automated UI tests to verify the rename does not break navigation or functionality\"]\n    \n    Done [shape=Msquare label=\"Done\"]\n    \n    Start -> IdentifyTab -> UpdateLabel -> TestDisplay -> Done\n}",
+    "graphId": "RenameNewPipelineToAgent",
+    "graphGoal": "Rename the UI tab 'New Pipeline' to 'Agent'",
+    "model": "moonshotai/kimi-k2",
+    "status": "EXECUTE",
+    "completedNodes": [
+      "Start",
+      "IdentifyTab"
+    ],
+    "nodeOutcomes": {
+      "Start": {
+        "status": "SUCCESS",
+        "notes": "Pipeline started"
+      },
+      "IdentifyTab": {
+        "status": "SUCCESS",
+        "notes": "Stage completed: IdentifyTab",
+        "contextUpdates": {
+          "last_stage": "IdentifyTab",
+          "last_response": "Below is a concise “map” of the places that usually determine the tab name “New Pipeline,” where you would need to make the change so that the UI consistently shows “Agent” instead.\n\n1. Primary tab de"
+        }
+      }
+    },
+    "startedAt": "2026-02-27T02:26:11.920Z",
+    "logsRoot": "logs/89872524-21ad-47cd-91fa-32a81c55c091",
+    "currentNode": "UpdateLabel"
   }
 ]

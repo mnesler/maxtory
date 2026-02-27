@@ -13,7 +13,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: "/", label: "Dashboard", icon: "◈" },
   { href: "/pipelines", label: "Pipelines", icon: "▤" },
-  { href: "/new", label: "New Pipeline", icon: "+" },
+  { href: "/new", label: "Agent", icon: "+" },
   { href: "/settings", label: "Settings", icon: "⚙" },
 ];
 

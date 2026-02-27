@@ -15,7 +15,7 @@ export default function Pipelines() {
       <div class="topbar">
         <h2>Pipelines</h2>
         <A href="/new" class="btn btn-primary btn-sm">
-          + New Pipeline
+          + Agent
         </A>
       </div>
       <div class="content">
