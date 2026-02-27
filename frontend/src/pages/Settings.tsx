@@ -9,6 +9,9 @@ export default function Settings() {
   const [saved, setSaved] = createSignal(false);
   const [error, setError] = createSignal("");
   const [customModel, setCustomModel] = createSignal("");
+  const [workspaceRoot, setWorkspaceRoot] = createSignal("");
+  const [savingWorkspace, setSavingWorkspace] = createSignal(false);
+  const [savedWorkspace, setSavedWorkspace] = createSignal(false);
 
   async function handleSelect(model: string) {
     setSaving(true);
@@ -32,6 +35,25 @@ export default function Settings() {
     if (!m) return;
     await handleSelect(m);
     setCustomModel("");
+  }
+
+  async function handleWorkspaceSubmit(e: Event) {
+    e.preventDefault();
+    const path = workspaceRoot().trim();
+    if (!path) return;
+    setSavingWorkspace(true);
+    setSavedWorkspace(false);
+    setError("");
+    try {
+      await api.updateSettings({ workspaceRoot: path });
+      setSavedWorkspace(true);
+      refetch();
+      setTimeout(() => setSavedWorkspace(false), 2000);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setSavingWorkspace(false);
+    }
   }
 
   return (
@@ -91,6 +113,30 @@ export default function Settings() {
                     {saving() ? "Saving…" : "Apply"}
                   </button>
                 </form>
+              </div>
+
+              <div class="card">
+                <div class="card-header">
+                  <span class="card-title">Workspace Root</span>
+                </div>
+                <p class="muted" style="margin-bottom: 10px;">
+                  Current: <code>{s().workspaceRoot}</code>
+                </p>
+                <form class="custom-model-form" onSubmit={handleWorkspaceSubmit}>
+                  <input
+                    type="text"
+                    class="input"
+                    placeholder="/path/to/workspace"
+                    value={workspaceRoot()}
+                    onInput={(e) => setWorkspaceRoot(e.currentTarget.value)}
+                  />
+                  <button type="submit" class="btn btn-primary" disabled={savingWorkspace() || !workspaceRoot().trim()}>
+                    {savingWorkspace() ? "Saving…" : "Apply"}
+                  </button>
+                </form>
+                <Show when={savedWorkspace()}>
+                  <div class="alert alert-success" style="margin-top:10px">Workspace root updated.</div>
+                </Show>
               </div>
 
               <Show when={saved()}>

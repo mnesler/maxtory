@@ -18,11 +18,23 @@ import { BarsChart } from "../components/BarsChart.js";
 
 type Tab = "nodes" | "bars" | "logs" | "events" | "dot" | "context";
 
+interface ToolCallRecord {
+  tool: string;
+  args: Record<string, unknown>;
+  result: string;
+}
+
+interface StageLog {
+  response?: string;
+  toolCalls?: ToolCallRecord[];
+}
+
 export default function RunDetail() {
   const params = useParams<{ id: string }>();
   const [tab, setTab] = createSignal<Tab>("nodes");
   const [dismissedGates, setDismissedGates] = createSignal<Set<string>>(new Set());
-  const [nodeLogs, setNodeLogs] = createSignal<Record<string, string>>({});
+  const [nodeLogs, setNodeLogs] = createSignal<Record<string, StageLog>>({});
+  const [expandedToolCalls, setExpandedToolCalls] = createSignal<Set<string>>(new Set());
 
   onMount(async () => {
     await loadRun(params.id);
@@ -36,17 +48,44 @@ export default function RunDetail() {
     try {
       const { files } = await api.getLogs(runId);
       const dirs = files.filter((f) => f.isDir).map((f) => f.name);
-      const entries: Record<string, string> = {};
+      const entries: Record<string, StageLog> = {};
       await Promise.all(
         dirs.map(async (stage) => {
-          try {
-            const content = await api.getLogFile(runId, stage, "response.md");
-            entries[stage] = content;
-          } catch { /* no response.md for this stage */ }
+          const stageLog: StageLog = {};
+          await Promise.all([
+            api.getLogFile(runId, stage, "response.md")
+              .then((c) => { stageLog.response = c; })
+              .catch(() => {}),
+            api.getLogFile(runId, stage, "tool_calls.jsonl")
+              .then((raw) => {
+                stageLog.toolCalls = raw
+                  .trim()
+                  .split("\n")
+                  .filter(Boolean)
+                  .map((line) => {
+                    try { return JSON.parse(line) as ToolCallRecord; }
+                    catch { return null; }
+                  })
+                  .filter((r): r is ToolCallRecord => r !== null);
+              })
+              .catch(() => {}),
+          ]);
+          if (stageLog.response || stageLog.toolCalls) {
+            entries[stage] = stageLog;
+          }
         })
       );
       setNodeLogs(entries);
     } catch { /* ignore */ }
+  }
+
+  function toggleToolCall(key: string) {
+    setExpandedToolCalls((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   }
 
   const run = () => runById(params.id);
@@ -185,10 +224,46 @@ export default function RunDetail() {
               <Show when={tab() === "logs"}>
                 <div class="node-logs">
                   <For each={Object.entries(nodeLogs())} fallback={<p class="text-muted" style="padding:12px">No logs available.</p>}>
-                    {([stage, content]) => (
+                    {([stage, stageLog]) => (
                       <div class="node-log-entry">
                         <div class="node-log-label">{stage}</div>
-                        <pre class="code-block" style="max-height:400px;overflow:auto">{content}</pre>
+                        <Show when={stageLog.toolCalls && stageLog.toolCalls.length > 0}>
+                          <div class="tool-calls-section">
+                            <div class="tool-calls-header">
+                              Tool Calls ({stageLog.toolCalls!.length})
+                            </div>
+                            <For each={stageLog.toolCalls!}>
+                              {(tc, i) => {
+                                const key = `${stage}-${i()}`;
+                                return (
+                                  <div class="tool-call-item">
+                                    <div
+                                      class="tool-call-summary"
+                                      onClick={() => toggleToolCall(key)}
+                                      style="cursor:pointer;display:flex;gap:8px;align-items:center;padding:6px 8px;background:var(--surface-alt,#1e1e2e);border-radius:4px;margin-bottom:4px"
+                                    >
+                                      <span style="color:var(--accent,#89b4fa);font-family:monospace">{tc.tool}</span>
+                                      <span class="text-muted" style="font-size:11px">
+                                        {expandedToolCalls().has(key) ? "▲ collapse" : "▼ expand"}
+                                      </span>
+                                    </div>
+                                    <Show when={expandedToolCalls().has(key)}>
+                                      <div style="padding:0 8px 8px">
+                                        <div class="text-muted" style="font-size:11px;margin-bottom:4px">Args</div>
+                                        <pre class="code-block" style="max-height:200px;overflow:auto;margin-bottom:8px">{JSON.stringify(tc.args, null, 2)}</pre>
+                                        <div class="text-muted" style="font-size:11px;margin-bottom:4px">Result</div>
+                                        <pre class="code-block" style="max-height:200px;overflow:auto">{tc.result}</pre>
+                                      </div>
+                                    </Show>
+                                  </div>
+                                );
+                              }}
+                            </For>
+                          </div>
+                        </Show>
+                        <Show when={stageLog.response}>
+                          <pre class="code-block" style="max-height:400px;overflow:auto">{stageLog.response}</pre>
+                        </Show>
                       </div>
                     )}
                   </For>

@@ -12,6 +12,7 @@ import { Message } from "../llm/client.js";
 
 export interface AppSettings {
   model: string;
+  workspaceRoot: string;
 }
 
 // Popular OpenRouter models for the UI picker
@@ -36,16 +37,16 @@ export function createApp(engine: PipelineEngine, settings: AppSettings, llmClie
   // ── Runs ─────────────────────────────────────────────────────────────────────
 
   // POST /api/runs/from-prompt — generate DOT from plain-text prompt via LLM, then start run
-  const PIPELINE_SYSTEM_PROMPT = `You are a pipeline architect. Convert the user's description into a valid Graphviz DOT pipeline definition.
+  const PIPELINE_SYSTEM_PROMPT = `You are a pipeline architect. Convert the user's description into a valid Graphviz DOT pipeline definition for an autonomous coding agent.
 
 Rules:
 - Use digraph with a descriptive graph ID (no spaces)
 - Include: graph [goal="..."] with a concise goal
 - Start node: shape=Mdiamond, label="Start"
 - End node: shape=Msquare, label="Done"
-- Intermediate nodes: shape=box, with a prompt="..." attribute describing what the LLM should do at that stage — be specific and detailed in the prompt
-- Connect nodes with edges: start -> node1 -> node2 -> done
-- Use 2–5 intermediate nodes appropriate to the task
+- Intermediate nodes: shape=box, type="agent", with a prompt="..." that is a direct imperative instruction for an autonomous coding agent — specific, actionable, e.g. "Find all files containing 'New Pipeline' and replace every occurrence with 'Agent'" not "rename the tab"
+- Use 1–4 intermediate nodes appropriate to the task — don't over-decompose simple tasks
+- Connect nodes with edges: Start -> node1 -> node2 -> Done
 
 Output ONLY the DOT source inside a \`\`\`dot code block. No explanation, no other text.`;
 
@@ -169,15 +170,16 @@ Output ONLY the DOT source inside a \`\`\`dot code block. No explanation, no oth
 
   // GET /api/settings — return current model config + available models
   app.get("/api/settings", (_req, res) => {
-    res.json({ model: settings.model, models: OPENROUTER_MODELS });
+    res.json({ model: settings.model, workspaceRoot: settings.workspaceRoot, models: OPENROUTER_MODELS });
   });
 
-  // PATCH /api/settings — update model
+  // PATCH /api/settings — update model and/or workspaceRoot
   app.patch("/api/settings", (req, res) => {
-    const { model } = req.body as { model?: string };
-    if (!model) return res.status(400).json({ error: "model is required" });
-    settings.model = model;
-    res.json({ model: settings.model });
+    const { model, workspaceRoot } = req.body as { model?: string; workspaceRoot?: string };
+    if (!model && !workspaceRoot) return res.status(400).json({ error: "model or workspaceRoot is required" });
+    if (model) settings.model = model;
+    if (workspaceRoot) settings.workspaceRoot = workspaceRoot;
+    res.json({ model: settings.model, workspaceRoot: settings.workspaceRoot });
   });
 
   // ── WebSocket ─────────────────────────────────────────────────────────────────

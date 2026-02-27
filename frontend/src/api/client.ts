@@ -61,6 +61,7 @@ export interface LogEntry {
 
 export interface AppSettings {
   model: string;
+  workspaceRoot: string;
   models: { id: string; name: string }[];
 }
 
@@ -136,10 +137,14 @@ export const api = {
   },
 
   async setModel(model: string): Promise<AppSettings> {
+    return this.updateSettings({ model });
+  },
+
+  async updateSettings(patch: Partial<Pick<AppSettings, "model" | "workspaceRoot">>): Promise<AppSettings> {
     const res = await fetch(`${BASE}/settings`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model }),
+      body: JSON.stringify(patch),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();

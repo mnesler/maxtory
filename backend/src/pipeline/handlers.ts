@@ -11,6 +11,7 @@ import { parseAcceleratorKey, normalizeLabel } from "./conditions.js";
 import type { Client } from "../llm/client.js";
 import { Message } from "../llm/client.js";
 import type { PipelineEvent, HumanChoice } from "./types.js";
+import { AgentHandler } from "./agent_handler.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -398,7 +399,12 @@ export class HandlerRegistry {
   }
 }
 
-export function createDefaultRegistry(backend: CodergenBackend): HandlerRegistry {
+export function createDefaultRegistry(
+  backend: CodergenBackend,
+  agentClient?: Client,
+  agentModel?: string,
+  workspaceRoot?: string,
+): HandlerRegistry {
   const codergen = new CodergenHandler(backend);
   const registry = new HandlerRegistry(codergen);
 
@@ -411,6 +417,11 @@ export function createDefaultRegistry(backend: CodergenBackend): HandlerRegistry
   registry.register("parallel", new ParallelHandler());
   registry.register("parallel.fan_in", new FanInHandler());
   registry.register("stack.manager_loop", new ManagerLoopHandler());
+
+  // Register AgentHandler if LLM client is available
+  if (agentClient && agentModel && workspaceRoot) {
+    registry.register("agent", new AgentHandler(agentClient, agentModel, workspaceRoot));
+  }
 
   return registry;
 }

@@ -12,6 +12,7 @@ const PORT = parseInt(process.env.PORT ?? "3001");
 // ── Settings store (mutable at runtime via API) ───────────────────────────────
 export const settings = {
   model: process.env.DEFAULT_MODEL ?? "moonshotai/kimi-k2",
+  workspaceRoot: process.env.WORKSPACE_ROOT ?? process.cwd(),
 };
 
 // ── LLM client ────────────────────────────────────────────────────────────────
@@ -31,7 +32,7 @@ const pipelineBackend = apiKey
   ? new LLMBackend(llmClient, settings.model)
   : new SimulationBackend();
 
-const registry = createDefaultRegistry(pipelineBackend);
+const registry = createDefaultRegistry(pipelineBackend, llmClient, settings.model, settings.workspaceRoot);
 const engine = new PipelineEngine(registry);
 
 // Load persisted runs before accepting requests
