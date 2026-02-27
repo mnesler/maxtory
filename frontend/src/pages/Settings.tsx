@@ -35,68 +35,80 @@ export default function Settings() {
   }
 
   return (
-    <div class="page-content">
-      <div class="page-header">
+    <>
+      <div class="topbar">
         <h2>Settings</h2>
-        <p class="page-subtitle">Configure the OpenRouter model used for pipeline execution.</p>
       </div>
+      <div class="content">
+        <Show when={settings.loading}>
+          <p class="muted">Loading settings…</p>
+        </Show>
 
-      <Show when={settings.loading}>
-        <p class="muted">Loading settings…</p>
-      </Show>
-
-      <Show when={settings()}>
-        {(s) => (
-          <div class="settings-panel">
-            <div class="settings-section">
-              <h3>Active Model</h3>
-              <div class="active-model-badge">{s().model}</div>
-            </div>
-
-            <div class="settings-section">
-              <h3>Select Model</h3>
-              <div class="model-grid">
-                <For each={s().models}>
-                  {(m) => (
-                    <button
-                      class={`model-card${s().model === m.id ? " selected" : ""}`}
-                      onClick={() => handleSelect(m.id)}
-                      disabled={saving()}
-                    >
-                      <span class="model-name">{m.name}</span>
-                      <span class="model-id">{m.id}</span>
-                    </button>
-                  )}
-                </For>
+        <Show when={settings()}>
+          {(s) => (
+            <div class="settings-panel">
+              <div class="card">
+                <div class="card-header">
+                  <span class="card-title">Active Model</span>
+                </div>
+                <div style="padding: 16px;">
+                  <div class="active-model-badge">{s().model}</div>
+                </div>
               </div>
-            </div>
 
-            <div class="settings-section">
-              <h3>Custom Model ID</h3>
-              <p class="muted">Enter any OpenRouter model identifier (e.g. <code>mistralai/mistral-large</code>).</p>
-              <form class="custom-model-form" onSubmit={handleCustomSubmit}>
-                <input
-                  type="text"
-                  class="input"
-                  placeholder="provider/model-name"
-                  value={customModel()}
-                  onInput={(e) => setCustomModel(e.currentTarget.value)}
-                />
-                <button type="submit" class="btn btn-primary" disabled={saving() || !customModel().trim()}>
-                  {saving() ? "Saving…" : "Apply"}
-                </button>
-              </form>
-            </div>
+              <div class="card">
+                <div class="card-header">
+                  <span class="card-title">Select Model</span>
+                </div>
+                <div style="padding: 16px;">
+                  <div class="model-grid">
+                    <For each={s().models}>
+                      {(m) => (
+                        <button
+                          class={`model-card${s().model === m.id ? " selected" : ""}`}
+                          onClick={() => handleSelect(m.id)}
+                          disabled={saving()}
+                        >
+                          <span class="model-name">{m.name}</span>
+                          <span class="model-id">{m.id}</span>
+                        </button>
+                      )}
+                    </For>
+                  </div>
+                </div>
+              </div>
 
-            <Show when={saved()}>
-              <div class="alert alert-success">Model updated successfully.</div>
-            </Show>
-            <Show when={error()}>
-              <div class="alert alert-error">{error()}</div>
-            </Show>
-          </div>
-        )}
-      </Show>
-    </div>
+              <div class="card">
+                <div class="card-header">
+                  <span class="card-title">Custom Model ID</span>
+                </div>
+                <div style="padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+                  <p class="muted">Enter any OpenRouter model identifier (e.g. <code>mistralai/mistral-large</code>).</p>
+                  <form class="custom-model-form" onSubmit={handleCustomSubmit}>
+                    <input
+                      type="text"
+                      class="input"
+                      placeholder="provider/model-name"
+                      value={customModel()}
+                      onInput={(e) => setCustomModel(e.currentTarget.value)}
+                    />
+                    <button type="submit" class="btn btn-primary" disabled={saving() || !customModel().trim()}>
+                      {saving() ? "Saving…" : "Apply"}
+                    </button>
+                  </form>
+                </div>
+              </div>
+
+              <Show when={saved()}>
+                <div class="alert alert-success">Model updated successfully.</div>
+              </Show>
+              <Show when={error()}>
+                <div class="alert alert-error">{error()}</div>
+              </Show>
+            </div>
+          )}
+        </Show>
+      </div>
+    </>
   );
 }

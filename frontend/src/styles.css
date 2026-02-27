@@ -510,20 +510,8 @@ input[type="text"]:focus { border-color: var(--accent); }
 .settings-panel {
   display: flex;
   flex-direction: column;
-  gap: 32px;
-  max-width: 760px;
+  gap: 16px;
 }
-
-.settings-section h3 {
-  font-size: 13px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text2);
-  margin-bottom: 12px;
-}
-
-.active-model-badge {
   display: inline-block;
   background: var(--bg3);
   border: 1px solid var(--accent);
