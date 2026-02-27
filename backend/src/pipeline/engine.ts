@@ -187,7 +187,7 @@ export class PipelineEngine {
     return Array.from(this.runs.values());
   }
 
-  async start(dotSource: string): Promise<PipelineRun> {
+  async start(dotSource: string, model?: string): Promise<PipelineRun> {
     const runId = uuid();
     const logsRoot = join(LOGS_BASE, runId);
     await fs.mkdir(logsRoot, { recursive: true });
@@ -221,6 +221,7 @@ export class PipelineEngine {
       dotSource,
       graphId: graph.id,
       graphGoal: graph.attrs.goal ?? "",
+      model,
       status: "INITIALIZE",
       completedNodes: [],
       nodeOutcomes: {},

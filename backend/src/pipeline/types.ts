@@ -40,6 +40,7 @@ export interface PipelineRun {
   dotSource: string;
   graphId: string;
   graphGoal: string;
+  model?: string;
   status: PipelineStatus;
   currentNode?: string;
   completedNodes: string[];

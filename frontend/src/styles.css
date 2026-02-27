@@ -597,3 +597,26 @@ input[type="text"]:focus { border-color: var(--accent); }
   border: 1px solid var(--fail);
   color: var(--fail);
 }
+
+/* ── Node logs (RunDetail Logs tab) ──────────────────────────────────────── */
+.node-logs {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0;
+}
+
+.node-log-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.node-log-label {
+  font-family: 'Fira Code', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

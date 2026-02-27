@@ -51,6 +51,24 @@ export async function loadRun(id: string): Promise<PipelineRun | null> {
     setState(
       produce((s) => {
         s.runs[run.id] = run;
+        // Seed events from nodeOutcomes if the run is already finished
+        // and we have no live WS events yet (avoids duplicates on live runs)
+        if (!s.events[run.id] || s.events[run.id].length === 0) {
+          const seeded: PipelineEvent[] = [];
+          for (const nodeId of run.completedNodes) {
+            const outcome = run.nodeOutcomes[nodeId];
+            if (outcome) {
+              seeded.push({
+                type: outcome.status === "FAIL" ? "NODE_FAIL" : "NODE_COMPLETE",
+                runId: run.id,
+                timestamp: run.completedAt ?? run.startedAt,
+                nodeId,
+                outcome,
+              });
+            }
+          }
+          s.events[run.id] = seeded;
+        }
       }),
     );
     return run;

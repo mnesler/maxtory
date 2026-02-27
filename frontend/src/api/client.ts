@@ -5,6 +5,7 @@ export interface PipelineRun {
   dotSource: string;
   graphId: string;
   graphGoal: string;
+  model?: string;
   status: "PARSE" | "VALIDATE" | "INITIALIZE" | "EXECUTE" | "FINALIZE" | "COMPLETED" | "FAILED";
   currentNode?: string;
   completedNodes: string[];

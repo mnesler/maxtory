@@ -9,23 +9,44 @@ import {
   eventsForRun,
   humanGatesForRun,
 } from "../store/runs.js";
+import { api } from "../api/client.js";
 import { StatusBadge } from "../components/StatusBadge.js";
 import { NodeList } from "../components/NodeList.js";
 import { EventLog } from "../components/EventLog.js";
 import { HumanGateModal } from "../components/HumanGateModal.js";
 
-type Tab = "nodes" | "events" | "dot" | "context";
+type Tab = "nodes" | "logs" | "events" | "dot" | "context";
 
 export default function RunDetail() {
   const params = useParams<{ id: string }>();
   const [tab, setTab] = createSignal<Tab>("nodes");
   const [dismissedGates, setDismissedGates] = createSignal<Set<string>>(new Set());
+  const [nodeLogs, setNodeLogs] = createSignal<Record<string, string>>({});
 
   onMount(async () => {
     await loadRun(params.id);
     const unsub = subscribeToRun(params.id);
     onCleanup(unsub);
+    // Load response.md for each completed node
+    loadNodeLogs(params.id);
   });
+
+  async function loadNodeLogs(runId: string) {
+    try {
+      const { files } = await api.getLogs(runId);
+      const dirs = files.filter((f) => f.isDir).map((f) => f.name);
+      const entries: Record<string, string> = {};
+      await Promise.all(
+        dirs.map(async (stage) => {
+          try {
+            const content = await api.getLogFile(runId, stage, "response.md");
+            entries[stage] = content;
+          } catch { /* no response.md for this stage */ }
+        })
+      );
+      setNodeLogs(entries);
+    } catch { /* ignore */ }
+  }
 
   const run = () => runById(params.id);
   const events = () => eventsForRun(params.id);
@@ -87,70 +108,64 @@ export default function RunDetail() {
             </div>
 
             {/* Meta */}
-            <div class="grid-2 mb-4">
-              <div class="card">
-                <div class="card-header">
-                  <span class="card-title">Info</span>
-                </div>
-                <table>
-                  <tbody>
-                    <tr>
-                      <td class="text-muted">Graph ID</td>
-                      <td class="font-mono">{r().graphId || "—"}</td>
-                    </tr>
-                    <tr>
-                      <td class="text-muted">Goal</td>
-                      <td>{r().graphGoal || "—"}</td>
-                    </tr>
-                    <tr>
-                      <td class="text-muted">Started</td>
-                      <td class="text-muted">{new Date(r().startedAt).toLocaleString()}</td>
-                    </tr>
-                    <tr>
-                      <td class="text-muted">Completed</td>
-                      <td class="text-muted">
-                        {r().completedAt ? new Date(r().completedAt!).toLocaleString() : "—"}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td class="text-muted">Nodes Done</td>
-                      <td>{r().completedNodes.length}</td>
-                    </tr>
-                    {r().error && (
-                      <tr>
-                        <td class="text-muted" style="color:var(--fail)">Error</td>
-                        <td style="color:var(--fail)">{r().error}</td>
-                      </tr>
-                    )}
-                    {r().notes && (
-                      <tr>
-                        <td class="text-muted">Notes</td>
-                        <td>{r().notes}</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+            <div class="card mb-4">
+              <div class="card-header">
+                <span class="card-title">Info</span>
               </div>
-
-              <div class="card">
-                <div class="card-header">
-                  <span class="card-title">Logs</span>
-                </div>
-                <A href={`/runs/${params.id}/logs`} class="btn btn-ghost btn-sm">
-                  Browse log files →
-                </A>
-              </div>
+              <table>
+                <tbody>
+                  <tr>
+                    <td class="text-muted">Graph ID</td>
+                    <td class="font-mono">{r().graphId || "—"}</td>
+                  </tr>
+                  <tr>
+                    <td class="text-muted">Goal</td>
+                    <td>{r().graphGoal || "—"}</td>
+                  </tr>
+                  <tr>
+                    <td class="text-muted">Model</td>
+                    <td class="font-mono">{r().model || "—"}</td>
+                  </tr>
+                  <tr>
+                    <td class="text-muted">Started</td>
+                    <td class="text-muted">{new Date(r().startedAt).toLocaleString()}</td>
+                  </tr>
+                  <tr>
+                    <td class="text-muted">Completed</td>
+                    <td class="text-muted">
+                      {r().completedAt ? new Date(r().completedAt!).toLocaleString() : "—"}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="text-muted">Nodes Done</td>
+                    <td>{r().completedNodes.length}</td>
+                  </tr>
+                  {r().error && (
+                    <tr>
+                      <td class="text-muted" style="color:var(--fail)">Error</td>
+                      <td style="color:var(--fail)">{r().error}</td>
+                    </tr>
+                  )}
+                  {r().notes && (
+                    <tr>
+                      <td class="text-muted">Notes</td>
+                      <td>{r().notes}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
 
             {/* Tabs */}
             <div class="card">
               <div class="tabs">
-                {(["nodes", "events", "dot"] as Tab[]).map((t) => (
+                {(["nodes", "logs", "events", "dot"] as Tab[]).map((t) => (
                   <div
                     class={`tab${tab() === t ? " active" : ""}`}
                     onClick={() => setTab(t)}
                   >
                     {t === "nodes" && "Nodes"}
+                    {t === "logs" && `Logs (${Object.keys(nodeLogs()).length})`}
                     {t === "events" && `Events (${events().length})`}
                     {t === "dot" && "DOT Source"}
                   </div>
@@ -159,6 +174,19 @@ export default function RunDetail() {
 
               <Show when={tab() === "nodes"}>
                 <NodeList run={r()} />
+              </Show>
+
+              <Show when={tab() === "logs"}>
+                <div class="node-logs">
+                  <For each={Object.entries(nodeLogs())} fallback={<p class="text-muted" style="padding:12px">No logs available.</p>}>
+                    {([stage, content]) => (
+                      <div class="node-log-entry">
+                        <div class="node-log-label">{stage}</div>
+                        <pre class="code-block" style="max-height:400px;overflow:auto">{content}</pre>
+                      </div>
+                    )}
+                  </For>
+                </div>
               </Show>
 
               <Show when={tab() === "events"}>

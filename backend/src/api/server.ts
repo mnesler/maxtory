@@ -52,7 +52,7 @@ export function createApp(engine: PipelineEngine, settings: AppSettings) {
       return res.status(400).json({ error: "dotSource is required" });
     }
     try {
-      const run = await engine.start(dotSource);
+      const run = await engine.start(dotSource, settings.model);
       res.status(201).json(run);
     } catch (err) {
       res.status(500).json({ error: String(err) });
