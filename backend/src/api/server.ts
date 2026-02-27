@@ -8,7 +8,25 @@ import { PipelineEngine } from "../pipeline/engine.js";
 import { WaitForHumanHandler } from "../pipeline/handlers.js";
 import type { PipelineEvent } from "../pipeline/types.js";
 
-export function createApp(engine: PipelineEngine) {
+export interface AppSettings {
+  model: string;
+}
+
+// Popular OpenRouter models for the UI picker
+export const OPENROUTER_MODELS = [
+  { id: "moonshotai/kimi-k2", name: "Kimi K2 (Moonshot)" },
+  { id: "anthropic/claude-opus-4-5", name: "Claude Opus 4.5" },
+  { id: "anthropic/claude-sonnet-4-5", name: "Claude Sonnet 4.5" },
+  { id: "openai/gpt-4o", name: "GPT-4o" },
+  { id: "openai/gpt-4o-mini", name: "GPT-4o Mini" },
+  { id: "google/gemini-2.5-pro", name: "Gemini 2.5 Pro" },
+  { id: "google/gemini-2.5-flash", name: "Gemini 2.5 Flash" },
+  { id: "meta-llama/llama-3.3-70b-instruct", name: "Llama 3.3 70B" },
+  { id: "deepseek/deepseek-r1", name: "DeepSeek R1" },
+  { id: "qwen/qwen3-235b-a22b", name: "Qwen3 235B" },
+];
+
+export function createApp(engine: PipelineEngine, settings: AppSettings) {
   const app = express();
   app.use(cors());
   app.use(express.json({ limit: "2mb" }));
@@ -96,6 +114,21 @@ export function createApp(engine: PipelineEngine) {
   // GET /api/health
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, timestamp: new Date().toISOString() });
+  });
+
+  // ── Settings ──────────────────────────────────────────────────────────────────
+
+  // GET /api/settings — return current model config + available models
+  app.get("/api/settings", (_req, res) => {
+    res.json({ model: settings.model, models: OPENROUTER_MODELS });
+  });
+
+  // PATCH /api/settings — update model
+  app.patch("/api/settings", (req, res) => {
+    const { model } = req.body as { model?: string };
+    if (!model) return res.status(400).json({ error: "model is required" });
+    settings.model = model;
+    res.json({ model: settings.model });
   });
 
   // ── WebSocket ─────────────────────────────────────────────────────────────────

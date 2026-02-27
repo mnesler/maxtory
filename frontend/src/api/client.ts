@@ -58,6 +58,11 @@ export interface LogEntry {
   isDir: boolean;
 }
 
+export interface AppSettings {
+  model: string;
+  models: { id: string; name: string }[];
+}
+
 const BASE = "/api";
 
 export const api = {
@@ -108,6 +113,22 @@ export const api = {
     const res = await fetch(`${BASE}/runs/${runId}/logs/${stage}/${file}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.text();
+  },
+
+  async getSettings(): Promise<AppSettings> {
+    const res = await fetch(`${BASE}/settings`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  },
+
+  async setModel(model: string): Promise<AppSettings> {
+    const res = await fetch(`${BASE}/settings`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
   },
 
   connectWs(runId: string, onEvent: (event: PipelineEvent) => void): WebSocket {

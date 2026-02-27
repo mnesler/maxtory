@@ -14,6 +14,7 @@ const navItems: NavItem[] = [
   { href: "/", label: "Dashboard", icon: "◈" },
   { href: "/pipelines", label: "Pipelines", icon: "▤" },
   { href: "/new", label: "New Pipeline", icon: "+" },
+  { href: "/settings", label: "Settings", icon: "⚙" },
 ];
 
 interface Props {
