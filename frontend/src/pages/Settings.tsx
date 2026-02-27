@@ -51,30 +51,26 @@ export default function Settings() {
                 <div class="card-header">
                   <span class="card-title">Active Model</span>
                 </div>
-                <div style="padding: 16px;">
-                  <div class="active-model-badge">{s().model}</div>
-                </div>
+                <div class="active-model-badge">{s().model}</div>
               </div>
 
               <div class="card">
                 <div class="card-header">
                   <span class="card-title">Select Model</span>
                 </div>
-                <div style="padding: 16px;">
-                  <div class="model-grid">
-                    <For each={s().models}>
-                      {(m) => (
-                        <button
-                          class={`model-card${s().model === m.id ? " selected" : ""}`}
-                          onClick={() => handleSelect(m.id)}
-                          disabled={saving()}
-                        >
-                          <span class="model-name">{m.name}</span>
-                          <span class="model-id">{m.id}</span>
-                        </button>
-                      )}
-                    </For>
-                  </div>
+                <div class="model-grid">
+                  <For each={s().models}>
+                    {(m) => (
+                      <button
+                        class={`model-card${s().model === m.id ? " selected" : ""}`}
+                        onClick={() => handleSelect(m.id)}
+                        disabled={saving()}
+                      >
+                        <span class="model-name">{m.name}</span>
+                        <span class="model-id">{m.id}</span>
+                      </button>
+                    )}
+                  </For>
                 </div>
               </div>
 
@@ -82,21 +78,19 @@ export default function Settings() {
                 <div class="card-header">
                   <span class="card-title">Custom Model ID</span>
                 </div>
-                <div style="padding: 16px; display: flex; flex-direction: column; gap: 10px;">
-                  <p class="muted">Enter any OpenRouter model identifier (e.g. <code>mistralai/mistral-large</code>).</p>
-                  <form class="custom-model-form" onSubmit={handleCustomSubmit}>
-                    <input
-                      type="text"
-                      class="input"
-                      placeholder="provider/model-name"
-                      value={customModel()}
-                      onInput={(e) => setCustomModel(e.currentTarget.value)}
-                    />
-                    <button type="submit" class="btn btn-primary" disabled={saving() || !customModel().trim()}>
-                      {saving() ? "Saving…" : "Apply"}
-                    </button>
-                  </form>
-                </div>
+                <p class="muted" style="margin-bottom: 10px;">Enter any OpenRouter model identifier (e.g. <code>mistralai/mistral-large</code>).</p>
+                <form class="custom-model-form" onSubmit={handleCustomSubmit}>
+                  <input
+                    type="text"
+                    class="input"
+                    placeholder="provider/model-name"
+                    value={customModel()}
+                    onInput={(e) => setCustomModel(e.currentTarget.value)}
+                  />
+                  <button type="submit" class="btn btn-primary" disabled={saving() || !customModel().trim()}>
+                    {saving() ? "Saving…" : "Apply"}
+                  </button>
+                </form>
               </div>
 
               <Show when={saved()}>

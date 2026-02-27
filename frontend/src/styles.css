@@ -512,6 +512,8 @@ input[type="text"]:focus { border-color: var(--accent); }
   flex-direction: column;
   gap: 16px;
 }
+
+.active-model-badge {
   display: inline-block;
   background: var(--bg3);
   border: 1px solid var(--accent);
