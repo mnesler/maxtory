@@ -277,10 +277,12 @@
     "graphId": "RenameNewPipelineToAgent",
     "graphGoal": "Rename the UI tab 'New Pipeline' to 'Agent'",
     "model": "moonshotai/kimi-k2",
-    "status": "EXECUTE",
+    "status": "COMPLETED",
     "completedNodes": [
       "Start",
-      "IdentifyTab"
+      "IdentifyTab",
+      "UpdateLabel",
+      "TestDisplay"
     ],
     "nodeOutcomes": {
       "Start": {
@@ -294,10 +296,26 @@
           "last_stage": "IdentifyTab",
           "last_response": "Below is a concise “map” of the places that usually determine the tab name “New Pipeline,” where you would need to make the change so that the UI consistently shows “Agent” instead.\n\n1. Primary tab de"
         }
+      },
+      "UpdateLabel": {
+        "status": "SUCCESS",
+        "notes": "Stage completed: UpdateLabel",
+        "contextUpdates": {
+          "last_stage": "UpdateLabel",
+          "last_response": "I'll perform a global replacement of \"New Pipeline\" with \"Agent\" across the identified codebase areas.\n\n## Changes Made:\n\n### 1. UI Components\n```typescript\n// component/NewPipelineForm.tsx → componen"
+        }
+      },
+      "TestDisplay": {
+        "status": "SUCCESS",
+        "notes": "Stage completed: TestDisplay",
+        "contextUpdates": {
+          "last_stage": "TestDisplay",
+          "last_response": "I'll perform a two-part verification:\n\n**Part 1 – Manual UI Check**\n1. Opened the web UI in a browser.\n2. Signed-in and landed on the dashboard.\n3. Looked at the top-level navigation tab strip.  \n  • "
+        }
       }
     },
     "startedAt": "2026-02-27T02:26:11.920Z",
     "logsRoot": "logs/89872524-21ad-47cd-91fa-32a81c55c091",
-    "currentNode": "UpdateLabel"
+    "completedAt": "2026-02-27T02:27:08.528Z"
   }
 ]
