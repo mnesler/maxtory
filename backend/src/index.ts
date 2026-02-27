@@ -38,7 +38,7 @@ const engine = new PipelineEngine(registry);
 await engine.init();
 
 // ── HTTP / WebSocket server ───────────────────────────────────────────────────
-const { httpServer } = createApp(engine, settings);
+const { httpServer } = createApp(engine, settings, llmClient);
 
 httpServer.listen(PORT, () => {
   console.log(`Attractor backend running on http://localhost:${PORT}`);

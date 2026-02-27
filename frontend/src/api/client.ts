@@ -79,6 +79,19 @@ export const api = {
     return res.json();
   },
 
+  async startRunFromPrompt(prompt: string): Promise<PipelineRun> {
+    const res = await fetch(`${BASE}/runs/from-prompt`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error ?? `HTTP ${res.status}`);
+    }
+    return res.json();
+  },
+
   async startRun(dotSource: string): Promise<PipelineRun> {
     const res = await fetch(`${BASE}/runs`, {
       method: "POST",

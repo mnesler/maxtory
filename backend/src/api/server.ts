@@ -7,6 +7,8 @@ import { WebSocketServer, WebSocket } from "ws";
 import { PipelineEngine } from "../pipeline/engine.js";
 import { WaitForHumanHandler } from "../pipeline/handlers.js";
 import type { PipelineEvent } from "../pipeline/types.js";
+import type { Client } from "../llm/client.js";
+import { Message } from "../llm/client.js";
 
 export interface AppSettings {
   model: string;
@@ -26,14 +28,61 @@ export const OPENROUTER_MODELS = [
   { id: "qwen/qwen3-235b-a22b", name: "Qwen3 235B" },
 ];
 
-export function createApp(engine: PipelineEngine, settings: AppSettings) {
+export function createApp(engine: PipelineEngine, settings: AppSettings, llmClient?: Client) {
   const app = express();
   app.use(cors());
   app.use(express.json({ limit: "2mb" }));
 
   // ── Runs ─────────────────────────────────────────────────────────────────────
 
-  // GET /api/runs — list all runs
+  // POST /api/runs/from-prompt — generate DOT from plain-text prompt via LLM, then start run
+  const PIPELINE_SYSTEM_PROMPT = `You are a pipeline architect. Convert the user's description into a valid Graphviz DOT pipeline definition.
+
+Rules:
+- Use digraph with a descriptive graph ID (no spaces)
+- Include: graph [goal="..."] with a concise goal
+- Start node: shape=Mdiamond, label="Start"
+- End node: shape=Msquare, label="Done"
+- Intermediate nodes: shape=box, with a prompt="..." attribute describing what the LLM should do at that stage — be specific and detailed in the prompt
+- Connect nodes with edges: start -> node1 -> node2 -> done
+- Use 2–5 intermediate nodes appropriate to the task
+
+Output ONLY the DOT source inside a \`\`\`dot code block. No explanation, no other text.`;
+
+  app.post("/api/runs/from-prompt", async (req, res) => {
+    if (!llmClient) {
+      return res.status(503).json({ error: "LLM client not available — check OPEN_ROUTER_KEY" });
+    }
+    const { prompt } = req.body as { prompt?: string };
+    if (!prompt?.trim()) {
+      return res.status(400).json({ error: "prompt is required" });
+    }
+    try {
+      const llmResponse = await llmClient.complete({
+        model: settings.model,
+        messages: [
+          Message.system(PIPELINE_SYSTEM_PROMPT),
+          Message.user(prompt.trim()),
+        ],
+      });
+      const rawText = Message.getText(llmResponse.message);
+      // Extract DOT source from ```dot ... ``` or ``` ... ``` fences
+      const match = rawText.match(/```(?:dot)?\s*(digraph[\s\S]*?)```/);
+      if (!match) {
+        return res.status(422).json({
+          error: "LLM did not return a valid DOT block",
+          raw: rawText.slice(0, 500),
+        });
+      }
+      const dotSource = match[1].trim();
+      const run = await engine.start(dotSource, settings.model);
+      res.status(201).json(run);
+    } catch (err) {
+      res.status(500).json({ error: String(err) });
+    }
+  });
+
+  // POST /api/runs — start a new pipeline run
   app.get("/api/runs", (_req, res) => {
     res.json(engine.getAllRuns());
   });

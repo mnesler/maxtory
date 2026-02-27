@@ -1,34 +1,22 @@
-// NewPipeline page — DOT editor + submit
+// NewPipeline page — plain-text prompt → LLM generates DOT → run starts
 
 import { createSignal } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { startRun } from "../store/runs.js";
-
-const EXAMPLE_DOT = `digraph example {
-  graph [goal="Run a simple hello-world pipeline"]
-
-  start [shape=Mdiamond, label="Start"]
-  greet [shape=box, label="Greet", prompt="Say hello world"]
-  done  [shape=Msquare, label="Done"]
-
-  start -> greet
-  greet -> done
-}
-`;
+import { api } from "../api/client.js";
 
 export default function NewPipeline() {
-  const [dot, setDot] = createSignal(EXAMPLE_DOT);
+  const [prompt, setPrompt] = createSignal("");
   const [submitting, setSubmitting] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
   const navigate = useNavigate();
 
   async function handleSubmit(e: Event) {
     e.preventDefault();
-    if (!dot().trim()) return;
+    if (!prompt().trim()) return;
     setSubmitting(true);
     setError(null);
     try {
-      const run = await startRun(dot());
+      const run = await api.startRunFromPrompt(prompt().trim());
       navigate(`/runs/${run.id}`);
     } catch (err) {
       setError(String(err));
@@ -44,43 +32,33 @@ export default function NewPipeline() {
       <div class="content">
         <form onSubmit={handleSubmit}>
           <div class="card mb-4">
-            <div class="card-header">
-              <span class="card-title">DOT Source</span>
-              <button
-                type="button"
-                class="btn btn-ghost btn-sm"
-                onClick={() => setDot(EXAMPLE_DOT)}
-              >
-                Load Example
-              </button>
-            </div>
             <textarea
-              rows={20}
-              value={dot()}
-              onInput={(e) => setDot((e.target as HTMLTextAreaElement).value)}
-              placeholder="digraph mypipeline { ... }"
+              style="min-height:120px"
+              value={prompt()}
+              onInput={(e) => setPrompt((e.target as HTMLTextAreaElement).value)}
+              placeholder="Describe what you want the pipeline to do…"
               spellcheck={false}
+              disabled={submitting()}
             />
           </div>
 
           {error() && (
-            <div
-              class="card mb-4"
-              style="border-color:var(--fail);color:var(--fail);font-size:13px;"
-            >
-              {error()}
-            </div>
+            <div class="alert alert-error mb-4">{error()}</div>
           )}
 
           <div class="flex gap-2">
-            <button type="submit" class="btn btn-primary" disabled={submitting()}>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              disabled={submitting() || !prompt().trim()}
+            >
               {submitting() ? (
                 <>
                   <span class="spinner" />
-                  Starting...
+                  Generating pipeline from prompt…
                 </>
               ) : (
-                "Run Pipeline"
+                "Start Pipeline"
               )}
             </button>
             <a href="/pipelines" class="btn btn-ghost">

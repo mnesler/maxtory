@@ -1,0 +1,227 @@
+[
+  {
+    "id": "3ec9a034-3223-4db5-b888-dcd3509bceae",
+    "dotSource": "// Simple hello-world pipeline — demonstrates start → codergen → exit flow\ndigraph hello_world {\n  graph [goal=\"Generate and print a hello-world greeting\"]\n\n  start  [shape=Mdiamond, label=\"Start\"]\n  greet  [shape=box,      label=\"Greet\",  prompt=\"Write a short friendly greeting\"]\n  done   [shape=Msquare,  label=\"Done\"]\n\n  start -> greet\n  greet -> done\n}\n",
+    "graphId": "hello_world",
+    "graphGoal": "Generate and print a hello-world greeting",
+    "status": "COMPLETED",
+    "completedNodes": [
+      "start",
+      "greet"
+    ],
+    "nodeOutcomes": {
+      "start": {
+        "status": "SUCCESS",
+        "notes": "Pipeline started"
+      },
+      "greet": {
+        "status": "SUCCESS",
+        "notes": "Stage completed: greet",
+        "contextUpdates": {
+          "last_stage": "greet",
+          "last_response": "[Simulated] Response for stage: greet\nPrompt: Write a short friendly greeting..."
+        }
+      }
+    },
+    "startedAt": "2026-02-27T01:02:40.943Z",
+    "logsRoot": "logs/3ec9a034-3223-4db5-b888-dcd3509bceae",
+    "completedAt": "2026-02-27T01:02:40.947Z"
+  },
+  {
+    "id": "0e7ea1d8-913f-40bf-becb-94800cbd6a9e",
+    "dotSource": "digraph write_tests {\n  graph [goal=\"Write fully encompassing tests for the backend and frontend of the Attractor monorepo at /home/maxwell/maxtory. The backend is Node.js/TypeScript using Express + WebSocket. The frontend is SolidJS + Vite. Use vitest for both. Tests must cover: backend - DOT parser, pipeline engine, all handlers (Start, Exit, Codergen, WaitForHuman, Tool, Parallel, FanIn, Conditional), persist store, and all REST+WebSocket API endpoints; frontend - api/client.ts, store/runs.ts, and all page/component rendering. Achieve maximum coverage. Write tests directly to disk at /home/maxwell/maxtory/backend/src/__tests__/ and /home/maxwell/maxtory/frontend/src/__tests__/. Install vitest and any required test deps. Ensure all tests pass by running them.\"]\n\n  start       [shape=Mdiamond, label=\"Start\"]\n\n  plan        [shape=box, label=\"Plan Tests\",\n               prompt=\"Read the full source of the Attractor monorepo at /home/maxwell/maxtory. Understand every backend module (pipeline/parser/dot.ts, pipeline/engine.ts, pipeline/handlers.ts, pipeline/conditions.ts, pipeline/context.ts, pipeline/types.ts, store/persist.ts, api/server.ts, index.ts) and every frontend module (src/api/client.ts, src/store/runs.ts, src/App.tsx, src/index.tsx, src/pages/*.tsx, src/components/*.tsx). Produce a detailed test plan listing every file to test, every function/class/endpoint to cover, and the test file paths to create.\"]\n\n  install_deps [shape=box, label=\"Install Test Deps\",\n                prompt=\"Install vitest, @vitest/coverage-v8, happy-dom, and msw into the correct workspaces of the monorepo at /home/maxwell/maxtory. For the backend run: cd /home/maxwell/maxtory && npm install --workspace=backend --save-dev vitest @vitest/coverage-v8. For the frontend run: cd /home/maxwell/maxtory && npm install --workspace=frontend --save-dev vitest @vitest/coverage-v8 happy-dom @solidjs/testing-library. Add a vitest config and test script to each workspace package.json.\"]\n\n  write_backend_tests [shape=box, label=\"Write Backend Tests\",\n                       prompt=\"Write comprehensive vitest test suites for the Attractor backend at /home/maxwell/maxtory/backend. Create test files under backend/src/__tests__/. Cover: (1) parser/dot.ts - parseDot, getOutgoingEdges, findStartNode, findExitNode, resolveHandlerType; (2) pipeline/conditions.ts - evaluateCondition, normalizeLabel, parseAcceleratorKey; (3) pipeline/context.ts - Context class all methods; (4) pipeline/handlers.ts - StartHandler, ExitHandler, ConditionalHandler, CodergenHandler with SimulationBackend, WaitForHumanHandler submit flow, ToolHandler, ParallelHandler, FanInHandler; (5) store/persist.ts - loadRuns and scheduleSave; (6) pipeline/engine.ts - full run lifecycle including COMPLETED, FAILED, parse error, human gate; (7) api/server.ts - all REST endpoints and WebSocket connection using supertest and ws. Write complete working test files to disk.\"]\n\n  write_frontend_tests [shape=box, label=\"Write Frontend Tests\",\n                        prompt=\"Write comprehensive vitest test suites for the Attractor frontend at /home/maxwell/maxtory/frontend. Create test files under frontend/src/__tests__/. Cover: (1) api/client.ts - all fetch functions (getRuns, getRun, startRun, submitHumanAnswer, getRunLogs, getLogFile) mocked with msw or vi.fn(); (2) store/runs.ts - reactive store, WebSocket sync, setRuns, updateRun; (3) App.tsx - renders navigation; (4) pages/Dashboard.tsx, Pipelines.tsx, NewPipeline.tsx, RunDetail.tsx, Logs.tsx - renders with mocked API data; (5) components/StatusBadge.tsx, NodeList.tsx, RunRow.tsx, StatCard.tsx, EventLog.tsx - unit rendering tests. Write complete working test files to disk using @solidjs/testing-library and happy-dom.\"]\n\n  run_tests   [shape=box, label=\"Run Tests & Fix\",\n               prompt=\"Run all tests in the Attractor monorepo. First run backend tests: cd /home/maxwell/maxtory && npm run test --workspace=backend. Then run frontend tests: cd /home/maxwell/maxtory && npm run test --workspace=frontend. For any failing tests, read the error, fix the test or source as needed, and re-run until all tests pass. Report final pass/fail counts.\"]\n\n  done        [shape=Msquare, label=\"Done\"]\n\n  start            -> plan\n  plan             -> install_deps\n  install_deps     -> write_backend_tests\n  write_backend_tests -> write_frontend_tests\n  write_frontend_tests -> run_tests\n  run_tests        -> done\n}",
+    "graphId": "write_tests",
+    "graphGoal": "Write fully encompassing tests for the backend and frontend of the Attractor monorepo at /home/maxwell/maxtory. The backend is Node.js/TypeScript using Express + WebSocket. The frontend is SolidJS + Vite. Use vitest for both. Tests must cover: backend - DOT parser, pipeline engine, all handlers (Start, Exit, Codergen, WaitForHuman, Tool, Parallel, FanIn, Conditional), persist store, and all REST+WebSocket API endpoints; frontend - api/client.ts, store/runs.ts, and all page/component rendering. Achieve maximum coverage. Write tests directly to disk at /home/maxwell/maxtory/backend/src/__tests__/ and /home/maxwell/maxtory/frontend/src/__tests__/. Install vitest and any required test deps. Ensure all tests pass by running them.",
+    "status": "COMPLETED",
+    "completedNodes": [
+      "start",
+      "plan",
+      "install_deps",
+      "write_backend_tests",
+      "write_frontend_tests",
+      "run_tests"
+    ],
+    "nodeOutcomes": {
+      "start": {
+        "status": "SUCCESS",
+        "notes": "Pipeline started"
+      },
+      "plan": {
+        "status": "SUCCESS",
+        "notes": "Stage completed: plan",
+        "contextUpdates": {
+          "last_stage": "plan",
+          "last_response": "[Simulated] Response for stage: plan\nPrompt: Read the full source of the Attractor monorepo at /home/maxwell/maxtory. Understand every backend mo..."
+        }
+      },
+      "install_deps": {
+        "status": "SUCCESS",
+        "notes": "Stage completed: install_deps",
+        "contextUpdates": {
+          "last_stage": "install_deps",
+          "last_response": "[Simulated] Response for stage: install_deps\nPrompt: Install vitest, @vitest/coverage-v8, happy-dom, and msw into the correct workspaces of the monorepo ..."
+        }
+      },
+      "write_backend_tests": {
+        "status": "SUCCESS",
+        "notes": "Stage completed: write_backend_tests",
+        "contextUpdates": {
+          "last_stage": "write_backend_tests",
+          "last_response": "[Simulated] Response for stage: write_backend_tests\nPrompt: Write comprehensive vitest test suites for the Attractor backend at /home/maxwell/maxtory/backend. C..."
+        }
+      },
+      "write_frontend_tests": {
+        "status": "SUCCESS",
+        "notes": "Stage completed: write_frontend_tests",
+        "contextUpdates": {
+          "last_stage": "write_frontend_tests",
+          "last_response": "[Simulated] Response for stage: write_frontend_tests\nPrompt: Write comprehensive vitest test suites for the Attractor frontend at /home/maxwell/maxtory/frontend...."
+        }
+      },
+      "run_tests": {
+        "status": "SUCCESS",
+        "notes": "Stage completed: run_tests",
+        "contextUpdates": {
+          "last_stage": "run_tests",
+          "last_response": "[Simulated] Response for stage: run_tests\nPrompt: Run all tests in the Attractor monorepo. First run backend tests: cd /home/maxwell/maxtory && npm ru..."
+        }
+      }
+    },
+    "startedAt": "2026-02-27T01:31:16.142Z",
+    "logsRoot": "logs/0e7ea1d8-913f-40bf-becb-94800cbd6a9e",
+    "completedAt": "2026-02-27T01:31:16.150Z"
+  },
+  {
+    "id": "0097489f-631f-4dd8-a0d8-42f3c4d1895a",
+    "dotSource": "digraph factor_numbers {\n  graph [goal=\"Factor two numbers: 84 and 105. Find all prime factors of each number and show the work step by step.\"]\n\n  start   [shape=Mdiamond, label=\"Start\"]\n  factor  [shape=box,      label=\"Factor\", prompt=\"Factor the following two numbers into their prime factors, showing all work step by step: 84 and 105. Then find their GCD and LCM using the prime factorizations.\"]\n  done    [shape=Msquare,  label=\"Done\"]\n\n  start -> factor\n  factor -> done\n}",
+    "graphId": "factor_numbers",
+    "graphGoal": "Factor two numbers: 84 and 105. Find all prime factors of each number and show the work step by step.",
+    "status": "COMPLETED",
+    "completedNodes": [
+      "start",
+      "factor"
+    ],
+    "nodeOutcomes": {
+      "start": {
+        "status": "SUCCESS",
+        "notes": "Pipeline started"
+      },
+      "factor": {
+        "status": "SUCCESS",
+        "notes": "Stage completed: factor",
+        "contextUpdates": {
+          "last_stage": "factor",
+          "last_response": "Prime–factorisation of 84  \n84 is even → 2 is a factor  \n84 ÷ 2 = 42  \n42 is even → 2 again  \n42 ÷ 2 = 21  \n21 ÷ 3 = 7  \n7 is prime.\n\nSo  \n84 = 2 × 2 × 3 × 7 = 2² · 3 · 7.\n\nPrime–factorisation of 105 "
+        }
+      }
+    },
+    "startedAt": "2026-02-27T01:50:29.440Z",
+    "logsRoot": "logs/0097489f-631f-4dd8-a0d8-42f3c4d1895a",
+    "completedAt": "2026-02-27T01:50:46.671Z"
+  },
+  {
+    "id": "114348ce-5989-4ee6-909a-b683ae512b9a",
+    "dotSource": "digraph test_model {\n  graph [goal=\"quick test\"]\n  start [shape=Mdiamond, label=\"Start\"]\n  done  [shape=Msquare,  label=\"Done\"]\n  start -> done\n}",
+    "graphId": "test_model",
+    "graphGoal": "quick test",
+    "model": "moonshotai/kimi-k2",
+    "status": "COMPLETED",
+    "completedNodes": [
+      "start"
+    ],
+    "nodeOutcomes": {
+      "start": {
+        "status": "SUCCESS",
+        "notes": "Pipeline started"
+      }
+    },
+    "startedAt": "2026-02-27T01:58:54.574Z",
+    "logsRoot": "logs/114348ce-5989-4ee6-909a-b683ae512b9a",
+    "completedAt": "2026-02-27T01:58:54.576Z"
+  },
+  {
+    "id": "905120cb-e3e4-480f-997a-d4728fea9432",
+    "dotSource": "digraph ui_graph_bars {\n  graph [goal=\"Add a Bars tab to the RunDetail page with animated bar charts showing pipeline node execution data using bright colors\"]\n\n  start    [shape=Mdiamond, label=\"Start\"]\n  plan     [shape=box,      label=\"Plan\",     prompt=\"We are building a SolidJS frontend (Vite, TypeScript, no external charting libs). The app has a RunDetail page with tabs. We need to add a new tab called Bars that shows animated bar charts of pipeline node execution data. The PipelineRun object has: completedNodes (string[]), nodeOutcomes (Record<string, Outcome> where Outcome has status: SUCCESS|FAIL|PARTIAL_SUCCESS|RETRY|SKIPPED). Design the component: what data to visualize, what bars to show, and the animation/color scheme. Use bright vivid colors (not muted). Output a detailed implementation plan with specific CSS animation keyframes and color values.\"]\n  implement [shape=box,     label=\"Implement\", prompt=\"Based on the plan, write the complete SolidJS TypeScript component code for a BarsChart component. It should: 1) Accept a PipelineRun prop, 2) Show one bar per completed node, 3) Color bars by outcome status using bright colors: SUCCESS=#22c55e, FAIL=#ef4444, PARTIAL_SUCCESS=#f59e0b, RETRY=#a855f7, SKIPPED=#64748b, 4) Animate bars growing from 0 to full height using CSS keyframes, 5) Show node name labels below bars, 6) Show outcome status text above bars, 7) Use a staggered animation delay per bar. Write the full component as valid SolidJS TSX including all imports. Also write the CSS classes needed. Output the TSX code block and CSS code block separately.\"]\n  done     [shape=Msquare,  label=\"Done\"]\n\n  start -> plan\n  plan -> implement\n  implement -> done\n}",
+    "graphId": "ui_graph_bars",
+    "graphGoal": "Add a Bars tab to the RunDetail page with animated bar charts showing pipeline node execution data using bright colors",
+    "model": "moonshotai/kimi-k2",
+    "status": "COMPLETED",
+    "completedNodes": [
+      "start",
+      "plan",
+      "implement"
+    ],
+    "nodeOutcomes": {
+      "start": {
+        "status": "SUCCESS",
+        "notes": "Pipeline started"
+      },
+      "plan": {
+        "status": "SUCCESS",
+        "notes": "Stage completed: plan",
+        "contextUpdates": {
+          "last_stage": "plan",
+          "last_response": "BarsTab – animated bar-chart component\n==============================\nPurpose  \nGive users an instant visual summary of how the most-recent pipeline run performed.  \nTwo small bar charts animate in se"
+        }
+      },
+      "implement": {
+        "status": "SUCCESS",
+        "notes": "Stage completed: implement",
+        "contextUpdates": {
+          "last_stage": "implement",
+          "last_response": "```tsx\nimport { Component } from 'solid-js';\nimport './BarsChart.css';\n\n// mirror the types from GQL Run\ntype NodeOutcome = 'SUCCESS' | 'FAIL' | 'PARTIAL_SUCCESS' | 'RETRY' | 'SKIPPED';\n\ninterface Pip"
+        }
+      }
+    },
+    "startedAt": "2026-02-27T02:01:29.283Z",
+    "logsRoot": "logs/905120cb-e3e4-480f-997a-d4728fea9432",
+    "completedAt": "2026-02-27T02:02:20.794Z"
+  },
+  {
+    "id": "0aa36192-606e-4b98-a7c6-4f5971caaed4",
+    "dotSource": "digraph redesign_new_pipeline {\n  graph [goal=\"Redesign the New Pipeline UI and backend to accept a plain-text prompt instead of DOT source\"]\n\n  start   [shape=Mdiamond, label=\"Start\"]\n\n  analyse [shape=box, label=\"Analyse\", prompt=\"Analyse the codebase and produce a detailed implementation plan for the following task. CONTEXT: The frontend NewPipeline.tsx page has a raw DOT source textarea that posts to POST /api/runs with { dotSource }. The backend server.ts POST /api/runs endpoint calls engine.start(dotSource, model). The LLM client is in backend/src/llm/openrouter.ts and has a complete(messages, model) method. The createApp function signature is createApp(engine, settings). TASK: 1) Add POST /api/runs/from-prompt to server.ts that accepts { prompt }, calls the LLM to generate a DOT graph, extracts the DOT from the response code block, then calls engine.start. 2) Update createApp to also accept an llmClient. 3) Redesign NewPipeline.tsx to have a single prompt textarea instead of DOT source, POST to /api/runs/from-prompt, show loading state, navigate to run on success. 4) Add api.startRunFromPrompt(prompt) to frontend/src/api/client.ts. Output a detailed plan.\"]\n\n  backend [shape=box, label=\"Backend\", prompt=\"Write the exact TypeScript additions for backend/src/api/server.ts. Add route POST /api/runs/from-prompt BEFORE the existing POST /api/runs. The createApp function should accept a third parameter llmClient of type LLMClient (import from ../llm/client.js). The route should: 1) validate { prompt } is present, 2) call llmClient.complete([{role: system, content: SYSTEM_PROMPT}, {role: user, content: prompt}], settings.model) where SYSTEM_PROMPT instructs the LLM to output only a Graphviz DOT pipeline in a code block, 3) extract the DOT source from between backtick fences using regex, 4) call engine.start(dotSource, settings.model), 5) return 201 with the run. Also write what changes in backend/src/index.ts to pass llmClient to createApp. Output code only.\"]\n\n  frontend [shape=box, label=\"Frontend\", prompt=\"Write the complete replacement for frontend/src/pages/NewPipeline.tsx. It should: use topbar + content + card layout, have a single textarea (class=input, min-height 120px) with placeholder Describe what you want the pipeline to do, have a Start Pipeline button disabled while loading, show a status div while loading saying Generating pipeline from prompt, show alert-error on failure, navigate to /runs/{id} on success using useNavigate from @solidjs/router, call POST /api/runs/from-prompt via a new api.startRunFromPrompt method. Also output the single new method to add to frontend/src/api/client.ts: startRunFromPrompt(prompt: string): Promise<PipelineRun>. Output complete file contents.\"]\n\n  done    [shape=Msquare,  label=\"Done\"]\n\n  start -> analyse\n  analyse -> backend\n  backend -> frontend\n  frontend -> done\n}",
+    "graphId": "redesign_new_pipeline",
+    "graphGoal": "Redesign the New Pipeline UI and backend to accept a plain-text prompt instead of DOT source",
+    "model": "moonshotai/kimi-k2",
+    "status": "COMPLETED",
+    "completedNodes": [
+      "start",
+      "analyse",
+      "backend",
+      "frontend"
+    ],
+    "nodeOutcomes": {
+      "start": {
+        "status": "SUCCESS",
+        "notes": "Pipeline started"
+      },
+      "analyse": {
+        "status": "SUCCESS",
+        "notes": "Stage completed: analyse",
+        "contextUpdates": {
+          "last_stage": "analyse",
+          "last_response": "Detailed Implementation Plan  \n=======================  \n\nGoal: Replace the raw-DOT textarea in NewPipeline.tsx with a plain-language prompt textarea that (1) contacts a new backend endpoint `/api/run"
+        }
+      },
+      "backend": {
+        "status": "SUCCESS",
+        "notes": "Stage completed: backend",
+        "contextUpdates": {
+          "last_stage": "backend",
+          "last_response": "backend/src/api/server.ts\n```ts\nimport { LLMClient } from '../llm/client.js';\n\nconst SYSTEM_PROMPT =\n  'Output only a Graphviz DOT pipeline, surrounded by ```dot and ``` fences. Do not include explana"
+        }
+      },
+      "frontend": {
+        "status": "SUCCESS",
+        "notes": "Stage completed: frontend",
+        "contextUpdates": {
+          "last_stage": "frontend",
+          "last_response": "──────── 1. frontend/src/pages/NewPipeline.tsx ────────\n```tsx\n// frontend/src/pages/NewPipeline.tsx\nimport { createSignal } from \"solid-js\";\nimport { useNavigate } from \"@solidjs/router\";\nimport * as"
+        }
+      }
+    },
+    "startedAt": "2026-02-27T02:07:59.588Z",
+    "logsRoot": "logs/0aa36192-606e-4b98-a7c6-4f5971caaed4",
+    "completedAt": "2026-02-27T02:09:18.382Z"
+  }
+]
