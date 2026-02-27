@@ -28,6 +28,9 @@ const backend = new SimulationBackend();
 const registry = createDefaultRegistry(backend);
 const engine = new PipelineEngine(registry);
 
+// Load persisted runs before accepting requests
+await engine.init();
+
 const { httpServer } = createApp(engine);
 
 httpServer.listen(PORT, () => {

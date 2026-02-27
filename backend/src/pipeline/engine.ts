@@ -11,6 +11,7 @@ import { WaitForHumanHandler } from "./handlers.js";
 import type { Outcome, PipelineRun, PipelineEvent, Checkpoint } from "./types.js";
 import type { ParsedGraph, GraphNode, GraphEdge } from "./parser/dot.js";
 import type { PipelineContext } from "./types.js";
+import { loadRuns as loadPersistedRuns, scheduleSave } from "../store/persist.js";
 
 const LOGS_BASE = process.env.ATTRACTOR_LOGS_DIR ?? "./logs";
 
@@ -149,6 +150,15 @@ export class PipelineEngine {
 
   constructor(private registry: HandlerRegistry) {}
 
+  /** Load persisted runs from disk. Call once at startup. */
+  async init(): Promise<void> {
+    this.runs = await loadPersistedRuns();
+  }
+
+  private persist(): void {
+    scheduleSave(this.runs);
+  }
+
   subscribe(runId: string, listener: (event: PipelineEvent) => void): () => void {
     const listeners = this.eventListeners.get(runId) ?? [];
     listeners.push(listener);
@@ -200,6 +210,7 @@ export class PipelineEngine {
         error: `Parse error: ${err}`,
       };
       this.runs.set(runId, run);
+      this.persist();
       return run;
     }
 
@@ -217,6 +228,7 @@ export class PipelineEngine {
       logsRoot,
     };
     this.runs.set(runId, run);
+    this.persist();
 
     // Execute asynchronously
     this.executeRun(runId, graph, logsRoot).catch((err) => {
@@ -225,6 +237,7 @@ export class PipelineEngine {
         r.status = "FAILED";
         r.error = String(err);
         r.completedAt = new Date().toISOString();
+        this.persist();
       }
     });
 
@@ -250,6 +263,7 @@ export class PipelineEngine {
       run.status = "FAILED";
       run.error = "No start node found (shape=Mdiamond or id=start)";
       run.completedAt = new Date().toISOString();
+      this.persist();
       return;
     }
 
@@ -284,6 +298,7 @@ export class PipelineEngine {
             run.status = "FAILED";
             run.error = `Goal gate unsatisfied for ${failedGate.id} and no retry target`;
             run.completedAt = new Date().toISOString();
+            this.persist();
             return;
           }
         }
@@ -340,6 +355,7 @@ export class PipelineEngine {
       nodeOutcomes[currentNode.id] = outcome;
       run.completedNodes = [...completedNodes];
       run.nodeOutcomes = { ...nodeOutcomes };
+      this.persist();
 
       this.emit({
         type: outcome.status === "FAIL" ? "NODE_FAIL" : "NODE_COMPLETE",
@@ -375,6 +391,7 @@ export class PipelineEngine {
           run.status = "FAILED";
           run.error = `Stage ${currentNode.id} failed with no outgoing edge`;
           run.completedAt = new Date().toISOString();
+          this.persist();
           return;
         }
         break;
@@ -384,10 +401,11 @@ export class PipelineEngine {
       if (nextEdge.attrs.loopRestart) {
         // Re-launch the run
         const newRun = await this.start(run.dotSource);
-        run.status = "COMPLETED";
-        run.completedAt = new Date().toISOString();
-        run.notes = `Restarted as ${newRun.id}`;
-        return;
+          run.status = "COMPLETED";
+          run.completedAt = new Date().toISOString();
+          run.notes = `Restarted as ${newRun.id}`;
+          this.persist();
+          return;
       }
 
       this.emit({
@@ -403,6 +421,7 @@ export class PipelineEngine {
         run.status = "FAILED";
         run.error = `Target node not found: ${nextEdge.to}`;
         run.completedAt = new Date().toISOString();
+        this.persist();
         return;
       }
 
@@ -412,6 +431,7 @@ export class PipelineEngine {
     run.status = "COMPLETED";
     run.completedAt = new Date().toISOString();
     run.currentNode = undefined;
+    this.persist();
 
     this.emit({
       type: "STATUS_CHANGE",
