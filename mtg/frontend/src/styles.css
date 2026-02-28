@@ -513,6 +513,22 @@ textarea:focus { border-color: var(--accent); }
   padding: 0 18px;
 }
 
+.clear-btn {
+  flex-shrink: 0;
+  height: 38px;
+  width: 38px;
+  padding: 0;
+  font-size: 14px;
+  color: var(--text3);
+  border-color: var(--border);
+}
+
+.clear-btn:hover:not(:disabled) {
+  color: var(--fail);
+  border-color: var(--fail);
+  background: rgba(239, 68, 68, 0.08);
+}
+
 /* ── Markdown ────────────────────────────────────────────────────────────── */
 
 .markdown { line-height: 1.65; }

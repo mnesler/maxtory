@@ -174,6 +174,14 @@ export default function ChatWindow(props: Props) {
     }, props.mode);
   }
 
+  function clearChat() {
+    cancelStream?.();
+    cancelStream = null;
+    setStreaming(false);
+    setInput("");
+    setMessages([]);
+  }
+
   function handleKeyDown(e: KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -231,6 +239,14 @@ export default function ChatWindow(props: Props) {
           onKeyDown={handleKeyDown}
           disabled={streaming() || !!props.sessionBroken}
         />
+        <button
+          class="btn btn-ghost clear-btn"
+          onClick={clearChat}
+          disabled={messages().length === 0}
+          title="Clear chat"
+        >
+          ✕
+        </button>
         <button
           class="btn btn-primary send-btn"
           onClick={send}
