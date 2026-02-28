@@ -5,6 +5,9 @@
 // After all pages are fetched, runs a reconciliation pass to resolve
 // combo_cards.oracle_id from the cards table.
 //
+// Resumable: counts existing combos and skips that many rows via API offset.
+// Retries: 403/429/5xx are retried up to MAX_RETRIES times with exponential backoff.
+//
 // Usage:
 //   node dist/ingest/spellbook.js
 
@@ -13,8 +16,11 @@ import { getDb } from "../db/client.js";
 
 const BASE_URL = "https://backend.commanderspellbook.com/variants";
 const PAGE_SIZE = 100;
-// Be polite — 200ms between pages
-const PAGE_DELAY_MS = 200;
+// Polite delay between pages
+const PAGE_DELAY_MS = 500;
+// Retry config
+const MAX_RETRIES = 5;
+const RETRY_BASE_MS = 5_000;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -42,6 +48,7 @@ interface SpellbookVariant {
 }
 
 interface SpellbookPage {
+  count: number;
   next: string | null;
   results: SpellbookVariant[];
 }
@@ -52,14 +59,35 @@ function j(value: unknown): string {
   return JSON.stringify(value ?? []);
 }
 
-// Commander Spellbook uses a string like "URG" for color identity.
-// Convert to the JSON array format we use: ["U","R","G"]
 function identityToArray(identity: string): string[] {
   return identity.split("").filter((c) => "WUBRG".includes(c));
 }
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+// Fetch with retry on transient errors (403, 429, 5xx)
+async function fetchWithRetry(url: string, attempt = 1): Promise<SpellbookPage> {
+  const res = await fetch(url, {
+    headers: { "User-Agent": "MaxtoryMTG/1.0", Accept: "application/json" },
+  });
+
+  if (res.ok) {
+    return res.json() as Promise<SpellbookPage>;
+  }
+
+  const retryable = res.status === 403 || res.status === 429 || res.status >= 500;
+  if (retryable && attempt <= MAX_RETRIES) {
+    const delay = RETRY_BASE_MS * Math.pow(2, attempt - 1);
+    process.stderr.write(
+      `\n  HTTP ${res.status} — retry ${attempt}/${MAX_RETRIES} in ${delay / 1000}s...\n`
+    );
+    await sleep(delay);
+    return fetchWithRetry(url, attempt + 1);
+  }
+
+  throw new Error(`Spellbook API error: ${res.status} after ${attempt - 1} retries`);
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -90,23 +118,24 @@ async function main(): Promise<void> {
     VALUES (@combo_id, @card_name)
   `);
 
-  let url: string | null = `${BASE_URL}?format=json&limit=${PAGE_SIZE}`;
-  let totalVariants = 0;
+  // Resume: count existing combos and start from that offset
+  const existing = (db.prepare("SELECT COUNT(*) as n FROM combos").get() as { n: number }).n;
+  const startOffset = existing;
+
+  let url: string | null =
+    `${BASE_URL}?format=json&limit=${PAGE_SIZE}&offset=${startOffset}`;
+  let totalVariants = existing;
   let page = 0;
 
-  console.log("Fetching Commander Spellbook combos...");
+  if (existing > 0) {
+    console.log(`Resuming from offset ${startOffset} (${existing} combos already in DB)...`);
+  } else {
+    console.log("Fetching Commander Spellbook combos...");
+  }
 
   while (url) {
     page++;
-    const res = await fetch(url, {
-      headers: { "User-Agent": "MaxtoryMTG/1.0", Accept: "application/json" },
-    });
-
-    if (!res.ok) {
-      throw new Error(`Spellbook API error on page ${page}: ${res.status}`);
-    }
-
-    const data = (await res.json()) as SpellbookPage;
+    const data = await fetchWithRetry(url);
     const variants = data.results.filter((v) => v.legalities?.commander === true);
 
     db.exec("BEGIN");
@@ -137,8 +166,10 @@ async function main(): Promise<void> {
       db.exec("ROLLBACK");
       throw err;
     }
+
     totalVariants += inserted;
-    process.stdout.write(`\r  Page ${page}: ${totalVariants} combos upserted so far...`);
+    const total = data.count ?? "?";
+    process.stdout.write(`\r  Page ${page}: ${totalVariants}/${total} combos upserted...`);
 
     url = data.next ?? null;
     if (url) await sleep(PAGE_DELAY_MS);
@@ -147,7 +178,6 @@ async function main(): Promise<void> {
   console.log(`\nAll pages fetched. Total: ${totalVariants} combos.`);
 
   // ── Reconciliation pass ───────────────────────────────────────────────────
-  // Resolve combo_cards.oracle_id for any rows where we now have the card.
   console.log("Resolving oracle_ids for combo_cards...");
   const reconcile = db.prepare(`
     UPDATE combo_cards
@@ -166,7 +196,7 @@ async function main(): Promise<void> {
   if (unresolved.n > 0) {
     console.log(
       `Note: ${unresolved.n} combo_cards rows still have no oracle_id ` +
-        "(cards not yet ingested from Scryfall, or token/template slots)."
+        "(tokens/templates not in Scryfall oracle cards)."
     );
   }
 
