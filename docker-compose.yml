@@ -1,0 +1,155 @@
+# ============================================================================
+# docker-compose.yml - Local Development Environment
+# ============================================================================
+# Usage:
+#   docker-compose up              # Start all services
+#   docker-compose up backend      # Start only backend
+#   docker-compose down            # Stop all services
+#   docker-compose logs -f mtg     # Follow logs for mtg service
+# ============================================================================
+
+version: '3.8'
+
+services:
+  # ──────────────────────────────────────────────────────────────────────────
+  # Backend API (Attractor + Auth)
+  # ──────────────────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: development
+    container_name: maxtory-backend-dev
+    ports:
+      - "3001:3001"
+    volumes:
+      # Mount source code for hot reload
+      - ./backend/src:/app/backend/src:ro
+      - ./backend/dist:/app/backend/dist
+      # Mount database directory
+      - ./backend/data:/app/backend/data
+      # Prevent node_modules override
+      - /app/node_modules
+      - /app/backend/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - OPEN_ROUTER_KEY=${OPEN_ROUTER_KEY}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-change-in-production}
+      - SESSION_SECRET=${SESSION_SECRET:-dev-session-secret-change-in-production}
+      - WORKSPACE_ROOT=/app
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-anthropic/claude-3.5-sonnet}
+    networks:
+      - maxtory-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # MTG Backend (Commander Deck Advisor API)
+  # ──────────────────────────────────────────────────────────────────────────
+  mtg-backend:
+    build:
+      context: .
+      dockerfile: mtg/Dockerfile
+      target: development
+    container_name: maxtory-mtg-backend-dev
+    ports:
+      - "3002:3002"
+    volumes:
+      # Mount source code for hot reload
+      - ./mtg/src:/app/mtg/src:ro
+      - ./mtg/dist:/app/mtg/dist
+      # Mount database directory (includes 315MB mtg.db)
+      - ./mtg/data:/app/mtg/data
+      # Prevent node_modules override
+      - /app/node_modules
+      - /app/mtg/node_modules
+    environment:
+      - NODE_ENV=development
+      - MTG_PORT=3002
+      - PORT=3002
+      - OPEN_ROUTER_KEY=${OPEN_ROUTER_KEY}
+    networks:
+      - maxtory-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3002/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Frontend (Attractor UI)
+  # ──────────────────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: development
+    container_name: maxtory-frontend-dev
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount source code for hot reload
+      - ./frontend/src:/app/frontend/src:ro
+      - ./frontend/public:/app/frontend/public:ro
+      - ./frontend/index.html:/app/frontend/index.html:ro
+      # Prevent node_modules override
+      - /app/node_modules
+      - /app/frontend/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:3001
+    networks:
+      - maxtory-network
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # MTG Frontend (Commander Deck Advisor UI)
+  # ──────────────────────────────────────────────────────────────────────────
+  mtg-frontend:
+    build:
+      context: .
+      dockerfile: mtg/frontend/Dockerfile
+      target: development
+    container_name: maxtory-mtg-frontend-dev
+    ports:
+      - "5174:5174"
+    volumes:
+      # Mount source code for hot reload
+      - ./mtg/frontend/src:/app/mtg/frontend/src:ro
+      - ./mtg/frontend/public:/app/mtg/frontend/public:ro
+      - ./mtg/frontend/index.html:/app/mtg/frontend/index.html:ro
+      # Prevent node_modules override
+      - /app/node_modules
+      - /app/mtg/frontend/node_modules
+    environment:
+      - VITE_MTG_API_URL=http://localhost:3002
+    networks:
+      - maxtory-network
+    depends_on:
+      - mtg-backend
+    restart: unless-stopped
+
+# ──────────────────────────────────────────────────────────────────────────
+# Networks
+# ──────────────────────────────────────────────────────────────────────────
+networks:
+  maxtory-network:
+    driver: bridge
+
+# ──────────────────────────────────────────────────────────────────────────
+# Volumes (optional: use named volumes for persistence)
+# ──────────────────────────────────────────────────────────────────────────
+# volumes:
+#   backend-data:
+#   mtg-data:

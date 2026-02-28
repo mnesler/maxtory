@@ -4,17 +4,12 @@ import type { JSX } from "solid-js";
 import "../styles/glitch.css";
 
 interface GlitchyButtonProps {
-  provider: "google" | "github";
+  provider: "github";
   onClick?: () => void;
   disabled?: boolean;
 }
 
 const PROVIDER_CONFIG = {
-  google: {
-    label: "Authenticate with Google",
-    icon: "G",
-    class: "google",
-  },
   github: {
     label: "Authenticate with GitHub",
     icon: "⚡",

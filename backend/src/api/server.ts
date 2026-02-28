@@ -48,40 +48,6 @@ export function createApp(engine: PipelineEngine, settings: AppSettings, llmClie
 
   const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
-  // Google OAuth
-  app.get("/auth/google", passport.authenticate("google", { session: false }));
-
-  app.get(
-    "/auth/google/callback",
-    passport.authenticate("google", { session: false, failureRedirect: `${FRONTEND_URL}?error=google_auth_failed` }),
-    (req, res) => {
-      const user = req.user as User;
-      const accessToken = signAccessToken({
-        userId: user.id,
-        email: user.email,
-        name: user.name,
-        avatar: user.avatar,
-      });
-      const refreshToken = signRefreshToken({
-        userId: user.id,
-        email: user.email,
-        name: user.name,
-        avatar: user.avatar,
-      });
-
-      // Set refresh token as httpOnly cookie (more secure)
-      res.cookie("refresh_token", refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-      });
-
-      // Redirect to frontend with access token in URL (will be stored in localStorage)
-      res.redirect(`${FRONTEND_URL}/auth?token=${accessToken}`);
-    }
-  );
-
   // GitHub OAuth
   app.get("/auth/github", passport.authenticate("github", { session: false, scope: ["user:email"] }));
 

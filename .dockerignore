@@ -1,0 +1,124 @@
+# ============================================================================
+# .dockerignore - Exclude files from Docker build context
+# ============================================================================
+# Reduces build context size and speeds up builds
+# ============================================================================
+
+# Node modules (will be installed fresh in container)
+node_modules/
+**/node_modules/
+npm-debug.log
+yarn-error.log
+
+# Build outputs (will be generated in container)
+dist/
+build/
+**/dist/
+**/build/
+.vite/
+**/.vite/
+
+# Source maps and type definitions
+*.js.map
+*.d.ts
+*.d.ts.map
+
+# Environment files (use secrets management instead)
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+cloudbuild.yaml
+.circleci/
+
+# Documentation (except README if needed)
+*.md
+!README.md
+docs/
+
+# Test files
+**/*.test.ts
+**/*.test.tsx
+**/*.test.js
+**/*.spec.ts
+**/*.spec.tsx
+**/*.spec.js
+coverage/
+.nyc_output/
+.vitest/
+
+# Editor and IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.editorconfig
+.eslintrc*
+.prettierrc*
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Database files (managed separately via Cloud Storage)
+# The 315MB mtg.db should NOT be in the image
+mtg/data/*.db
+mtg/data/*.db-wal
+mtg/data/*.db-shm
+backend/data/*.db
+backend/data/*.db-wal
+backend/data/*.db-shm
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Docker files (don't copy into context recursively)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Examples and pipelines (not needed in production)
+examples/
+pipelines/
+**/examples/
+**/pipelines/
+
+# License files
+LICENSE*
+
+# Cache directories
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+.turbo/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Package manager lock files for other managers
+yarn.lock
+pnpm-lock.yaml
+
+# Keep package-lock.json for npm ci reproducibility
+# !package-lock.json

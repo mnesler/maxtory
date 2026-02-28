@@ -21,17 +21,11 @@ export default function Landing() {
 
     // Check for OAuth error in URL
     if (searchParams.error) {
-      if (searchParams.error === "google_auth_failed") {
-        setError("Google authentication failed. Please try again.");
-      } else if (searchParams.error === "github_auth_failed") {
+      if (searchParams.error === "github_auth_failed") {
         setError("GitHub authentication failed. Please try again.");
       }
     }
   });
-
-  function handleGoogleAuth() {
-    window.location.href = `${API_URL}/auth/google`;
-  }
 
   function handleGitHubAuth() {
     window.location.href = `${API_URL}/auth/github`;
@@ -123,10 +117,6 @@ export default function Landing() {
             "margin-top": "64px",
           }}
         >
-          <div class="hologram" style={{ padding: "2px", "border-radius": "4px" }}>
-            <GlitchyButton provider="google" onClick={handleGoogleAuth} />
-          </div>
-
           <div class="hologram" style={{ padding: "2px", "border-radius": "4px" }}>
             <GlitchyButton provider="github" onClick={handleGitHubAuth} />
           </div>
