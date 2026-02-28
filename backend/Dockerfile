@@ -57,9 +57,8 @@ COPY package*.json ./
 # Copy backend package files
 COPY backend/package*.json ./backend/
 
-# Install ONLY production dependencies (no devDependencies)
-# This significantly reduces image size
-RUN npm ci --workspace=backend --include-workspace-root --omit=dev
+# Install ALL dependencies (including devDependencies for better-sqlite3 native modules)
+RUN npm ci --workspace=backend --include-workspace-root
 
 # ──────────────────────────────────────────────────────────────────────────
 # Stage 5: Production runtime (FINAL IMAGE)
