@@ -109,6 +109,7 @@ body {
   flex-shrink: 0;
 }
 
+/* Mode toggle row — right-justified in the chat panel */
 /* ── Deck Loader ─────────────────────────────────────────────────────────── */
 
 .deck-loader {

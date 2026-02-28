@@ -48,14 +48,14 @@ export default function App() {
       {/* Header */}
       <header class="advisor-header">
         <div class="advisor-logo">
-          <span class="advisor-logo-icon">◈</span>
-          <span class="advisor-logo-text">MTG Deck Advisor</span>
+          <span class="advisor-logo-icon">📚</span>
+          <span class="advisor-logo-text">Rhystic Study</span>
         </div>
         <div class="advisor-header-sub">
-          AI-powered Commander deck analysis · Powered by RAG + Scryfall data
+          Did you pay the 1? · AI-powered Commander advisor
         </div>
 
-        {/* Mode toggle — always visible */}
+        {/* Mode toggle */}
         <div class="mode-toggle" role="group" aria-label="Response mode">
           {MODES.map((m) => (
             <button
@@ -103,7 +103,6 @@ export default function App() {
 
         {/* Right panel — Chat */}
         <main class="advisor-chat-panel">
-          <div class="panel-title">Deck Advisor Chat</div>
           <ChatWindow
             sessionId={SESSION_ID}
             deckLoaded={deckInfo() !== null && sessionOk() !== false}
