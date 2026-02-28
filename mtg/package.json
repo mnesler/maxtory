@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "dev": "tsx watch src/index.ts",
     "ingest:scryfall": "tsx src/ingest/scryfall.ts",
     "ingest:spellbook": "tsx src/ingest/spellbook.ts",
@@ -24,6 +26,7 @@
     "@types/express": "^4.17.21",
     "@types/node": "^22.19.13",
     "tsx": "^4.7.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^4.0.18"
   }
 }
