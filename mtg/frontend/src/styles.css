@@ -335,8 +335,10 @@ textarea:focus { border-color: var(--accent); }
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 2px 0;
+  padding: 3px 6px;
   font-size: 12.5px;
+  border-radius: 4px;
+  /* Background gradient is set inline per-card via color identity */
 }
 
 .card-qty {

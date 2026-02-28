@@ -9,6 +9,8 @@ export interface DeckCard {
   name: string;
   quantity: number;
   section: "commander" | "companion" | "mainboard" | "sideboard" | "maybeboard";
+  /** MTG color identity symbols e.g. ["W","U","B"] — populated from DB at load time. */
+  colorIdentity?: string[];
 }
 
 export interface LoadDeckResponse {

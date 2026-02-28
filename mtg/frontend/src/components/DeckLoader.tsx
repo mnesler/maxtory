@@ -16,6 +16,28 @@ interface Props {
   onDeckLoaded: (response: LoadDeckResponse, cards: DeckCard[]) => void;
 }
 
+// ── Color identity → gradient ─────────────────────────────────────────────────
+// Maps MTG color symbols to subtle RGBA stops for a background gradient.
+
+const COLOR_RGB: Record<string, string> = {
+  W: "232, 220, 200",   // warm parchment white
+  U: "59,  130, 246",   // blue
+  B: "124,  58, 237",   // dark purple (MTG black)
+  R: "239,  68,  68",   // red
+  G: " 34, 197,  94",   // green
+};
+const COLOR_ALPHA = 0.15;
+
+function cardGradient(colorIdentity?: string[]): string {
+  const ci = (colorIdentity ?? []).filter((c) => COLOR_RGB[c]);
+  if (ci.length === 0) return "";
+  const stops = ci.slice(0, 3).map((c) => `rgba(${COLOR_RGB[c]}, ${COLOR_ALPHA})`);
+  if (stops.length === 1) {
+    return `linear-gradient(135deg, ${stops[0]}, rgba(0,0,0,0))`;
+  }
+  return `linear-gradient(135deg, ${stops.join(", ")})`;
+}
+
 // ── Section display order / labels ────────────────────────────────────────────
 
 const SECTION_ORDER = ["commander", "companion", "mainboard", "sideboard", "maybeboard"] as const;
@@ -234,7 +256,10 @@ function DeckDisplay(props: DeckDisplayProps) {
                 </div>
                 <For each={cards}>
                   {(card) => (
-                    <div class="card-item">
+                    <div
+                      class="card-item"
+                      style={cardGradient(card.colorIdentity) ? `background: ${cardGradient(card.colorIdentity)}` : undefined}
+                    >
                       <span class="card-qty">{card.quantity}</span>
                       <span class="card-link card-name" data-card={card.name}>{card.name}</span>
                     </div>

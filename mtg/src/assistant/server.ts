@@ -214,6 +214,28 @@ app.delete("/api/chat/:sessionId", (req, res) => {
   res.json({ deleted });
 });
 
+// ── Color identity enrichment ─────────────────────────────────────────────────
+// Batch-queries the DB for each card's color_identity and returns a new array
+// with colorIdentity attached. Cards not in the DB get colorIdentity: [].
+
+function enrichCardsWithColors(cards: import("../deck/types.js").DeckCard[]): import("../deck/types.js").DeckCard[] {
+  if (cards.length === 0) return cards;
+  const db = getDb();
+  const names = [...new Set(cards.map((c) => c.name))];
+  const placeholders = names.map(() => "?").join(",");
+  const rows = db
+    .prepare(`SELECT name, color_identity FROM cards WHERE name IN (${placeholders})`)
+    .all(...names) as { name: string; color_identity: string }[];
+
+  const colorMap = new Map<string, string[]>();
+  for (const row of rows) {
+    try { colorMap.set(row.name, JSON.parse(row.color_identity) as string[]); }
+    catch { colorMap.set(row.name, []); }
+  }
+
+  return cards.map((c) => ({ ...c, colorIdentity: colorMap.get(c.name) ?? [] }));
+}
+
 // ── Card name extraction helper ───────────────────────────────────────────────
 //
 // After the LLM finishes streaming, scan its response for **bold** tokens and
@@ -291,7 +313,7 @@ app.post("/api/deck/load", async (req, res) => {
         cardCount: deck.cardCount,
         name: deck.name,
         source: "moxfield",
-        cards: deck.cards,
+        cards: enrichCardsWithColors(deck.cards),
       });
     } else if (decklist?.trim()) {
       const { deck, warnings } = parseDecklist(decklist.trim());
@@ -303,7 +325,7 @@ app.post("/api/deck/load", async (req, res) => {
         cardCount: deck.cardCount,
         source: "paste",
         warnings: warnings.length > 0 ? warnings : undefined,
-        cards: deck.cards,
+        cards: enrichCardsWithColors(deck.cards),
       });
     }
   } catch (err) {
