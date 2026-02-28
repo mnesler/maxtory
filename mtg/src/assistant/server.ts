@@ -22,7 +22,7 @@ import cors from "cors";
 import { warmCache } from "./vector.js";
 import { classifyIntent } from "./intent.js";
 import { retrieve } from "./retrieve.js";
-import { buildContext, buildSystemPrompt } from "./context.js";
+import { buildContext, buildSystemPrompt, buildDeckSystemBlock } from "./context.js";
 import { streamAnswer } from "./answer.js";
 import {
   getOrCreateSession,
@@ -30,8 +30,11 @@ import {
   deleteSession,
   addUserMessage,
   addAssistantMessage,
+  setSessionDeck,
   sessionSnapshot,
 } from "./conversation.js";
+import { fetchMoxfieldDeck, parseMoxfieldUrl, MoxfieldError } from "../deck/moxfield.js";
+import { parseDecklist } from "../deck/parser.js";
 
 const PORT = parseInt(process.env.MTG_PORT ?? process.env.PORT ?? "3002");
 
@@ -82,7 +85,14 @@ app.post("/api/chat", async (req, res) => {
 
     // Step 3: build context block
     const context = buildContext(result, intent);
-    const systemPrompt = buildSystemPrompt(intent);
+    const baseSystemPrompt = buildSystemPrompt(intent);
+    // Prepend deck context if a deck is loaded in this session
+    const deckBlock = session.loadedDeck
+      ? buildDeckSystemBlock(session.loadedDeck)
+      : null;
+    const systemPrompt = deckBlock
+      ? `${deckBlock}\n\n---\n\n${baseSystemPrompt}`
+      : baseSystemPrompt;
 
     // Step 4: stream the answer
     let fullText = "";
@@ -135,6 +145,73 @@ app.get("/api/chat/:sessionId", (req, res) => {
 app.delete("/api/chat/:sessionId", (req, res) => {
   const deleted = deleteSession(req.params.sessionId);
   res.json({ deleted });
+});
+
+// ── POST /api/deck/load ───────────────────────────────────────────────────────
+//
+// Load a deck into a session from either a Moxfield URL or a raw decklist.
+//
+// Request body:
+//   { sessionId?: string, moxfieldUrl?: string, decklist?: string }
+//
+// Response:
+//   { sessionId, commanders, cardCount, name?, warnings? }
+
+app.post("/api/deck/load", async (req, res) => {
+  const { sessionId, moxfieldUrl, decklist } = req.body as {
+    sessionId?: string;
+    moxfieldUrl?: string;
+    decklist?: string;
+  };
+
+  if (!moxfieldUrl?.trim() && !decklist?.trim()) {
+    res.status(400).json({ error: "Either moxfieldUrl or decklist is required." });
+    return;
+  }
+
+  const session = getOrCreateSession(sessionId);
+
+  try {
+    if (moxfieldUrl?.trim()) {
+      // Validate it looks like a Moxfield URL before fetching
+      if (!parseMoxfieldUrl(moxfieldUrl.trim())) {
+        res.status(400).json({
+          error: "Invalid Moxfield URL. Expected: https://moxfield.com/decks/{deckId}",
+        });
+        return;
+      }
+
+      const deck = await fetchMoxfieldDeck(moxfieldUrl.trim());
+      setSessionDeck(session, deck);
+
+      res.json({
+        sessionId: session.id,
+        commanders: deck.commanders,
+        cardCount: deck.cardCount,
+        name: deck.name,
+        source: "moxfield",
+      });
+    } else if (decklist?.trim()) {
+      const { deck, warnings } = parseDecklist(decklist.trim());
+      setSessionDeck(session, deck);
+
+      res.json({
+        sessionId: session.id,
+        commanders: deck.commanders,
+        cardCount: deck.cardCount,
+        source: "paste",
+        warnings: warnings.length > 0 ? warnings : undefined,
+      });
+    }
+  } catch (err) {
+    if (err instanceof MoxfieldError) {
+      const status = err.statusCode === 404 ? 404 : err.statusCode === 403 ? 403 : 502;
+      res.status(status).json({ error: err.message });
+      return;
+    }
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ error: message });
+  }
 });
 
 // ── GET /api/health ───────────────────────────────────────────────────────────

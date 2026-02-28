@@ -1,7 +1,7 @@
 {
   "name": "attractor-monorepo",
   "private": true,
-  "workspaces": ["backend", "frontend", "mtg"],
+  "workspaces": ["backend", "frontend", "mtg", "mtg/frontend"],
   "scripts": {
     "dev": "npm run dev --workspace=backend & npm run dev --workspace=frontend",
     "build": "npm run build --workspace=backend && npm run build --workspace=frontend && npm run build --workspace=mtg",
@@ -13,6 +13,8 @@
     "ingest:spellbook": "npm run ingest:spellbook --workspace=mtg",
     "embed:cards": "npm run embed:cards --workspace=mtg",
     "assistant": "npm run assistant --workspace=mtg",
-    "assistant:serve": "npm run assistant:serve --workspace=mtg"
+    "assistant:serve": "npm run assistant:serve --workspace=mtg",
+    "mtg:ui": "npm run dev --workspace=mtg-deck-advisor",
+    "mtg:ui:build": "npm run build --workspace=mtg-deck-advisor"
   }
 }

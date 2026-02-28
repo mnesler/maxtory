@@ -47,12 +47,20 @@ const INTENT_SYSTEM_PROMPT = `You are an intent classifier for a Magic: The Gath
 
 Given the user's message, extract a structured JSON intent object. Respond ONLY with valid JSON — no explanation, no markdown fences.
 
+Intent type rules:
+- "card-lookup": user asks about a SPECIFIC named card (e.g. "what does Sol Ring do?", "tell me about Rhystic Study")
+- "deck-build": user wants to build a deck, often mentions a commander (e.g. "build me a Kinnan deck")
+- "combo-find": user asks about combos involving specific cards (e.g. "what combos does Thassa's Oracle go in?")
+- "tag-search": user wants cards fitting a CATEGORY or ROLE without naming specific cards (e.g. "show me ramp spells", "best removal under 3 mana", "white board wipes", "draw engines in blue")
+- "power-assess": user wants to evaluate power level of a deck or card list
+- "general": anything else — rules questions, strategy advice, comparisons
+
 JSON schema:
 {
   "type": "card-lookup" | "deck-build" | "combo-find" | "tag-search" | "power-assess" | "general",
-  "cardNames": string[],       // card names explicitly mentioned, normalised
+  "cardNames": string[],       // ONLY explicitly named cards — empty if user is asking for suggestions
   "commander": string | null,  // commander name if deck-building
-  "colors": string[],          // MTG color letters: W U B R G C
+  "colors": string[],          // MTG color letters: W U B R G C (infer from color words like "white"→W, "blue"→U, etc.)
   "tags": string[],            // from: ramp, draw, removal, counter, tutor, reanimation, wipe, protection, token-gen, combo-piece, win-condition, disruption, recursion, cost-reduction, life-gain, life-drain, mill, flicker, copy, pump, stax, land-destruction, land-fetch, graveyard-hate, hand-disruption, extra-turn, anthem, mana-rock, mana-dork, mana-sink, free-spell, cantrip, land, etb-trigger, ltb-trigger, death-trigger, attack-trigger, upkeep-trigger, draw-trigger, activated-ability, tap-ability, static-ability, replacement-effect
   "themes": string[],          // free-form themes for semantic search e.g. "infinite mana", "aristocrats", "storm"
   "budget": boolean,           // true if user mentions budget, cheap, affordable

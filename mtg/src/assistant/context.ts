@@ -10,6 +10,7 @@
 
 import type { RetrievalResult, RetrievedCard, RetrievedCombo } from "./retrieve.js";
 import type { Intent } from "./intent.js";
+import type { LoadedDeck } from "../deck/types.js";
 
 const CHAR_BUDGET = 14_000; // ~3500 tokens, leaves room for system + user message
 
@@ -130,6 +131,54 @@ export function buildContext(result: RetrievalResult, intent: Intent): BuiltCont
 }
 
 // ── System prompt for the answer LLM ─────────────────────────────────────────
+
+// ── Deck system prompt block ──────────────────────────────────────────────────
+
+/**
+ * Formats the loaded deck into a system prompt block that the LLM can see.
+ * This lets the LLM know exactly what is already in the deck so it can make
+ * targeted suggestions (add cards, remove cards, identify gaps, etc.).
+ */
+export function buildDeckSystemBlock(deck: LoadedDeck): string {
+  const lines: string[] = [];
+
+  const deckLabel = deck.name ? `"${deck.name}"` : "the loaded deck";
+
+  if (deck.commanders.length > 0) {
+    lines.push(`Commander(s): ${deck.commanders.join(" / ")}`);
+  }
+
+  lines.push(`Total cards (excluding commander): ${deck.cardCount}`);
+  if (deck.source === "moxfield" && deck.moxfieldUrl) {
+    lines.push(`Source: ${deck.moxfieldUrl}`);
+  }
+
+  // Group cards by section and type for readability
+  const sections = new Map<string, string[]>();
+  for (const card of deck.cards) {
+    if (card.section === "commander" || card.section === "companion") continue;
+    const key = card.section === "mainboard" ? "Mainboard" : card.section.charAt(0).toUpperCase() + card.section.slice(1);
+    if (!sections.has(key)) sections.set(key, []);
+    sections.get(key)!.push(`${card.quantity}x ${card.name}`);
+  }
+
+  for (const [sectionName, cardLines] of sections) {
+    lines.push(`\n### ${sectionName} (${cardLines.length} entries)`);
+    lines.push(cardLines.join("\n"));
+  }
+
+  return [
+    `The user has loaded ${deckLabel} for analysis.`,
+    "You have full visibility of this deck. When answering:",
+    "- Reference specific cards already in the deck by name.",
+    "- Suggest additions that complement what is already there.",
+    "- Identify gaps (e.g. missing ramp, removal, card draw) based on what is present.",
+    "- If suggesting replacements, name both the card to add and the card to cut.",
+    "",
+    "## Current Deck",
+    lines.join("\n"),
+  ].join("\n");
+}
 
 export function buildSystemPrompt(intent: Intent): string {
   const base = [

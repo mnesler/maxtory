@@ -8,6 +8,7 @@
 
 import { randomUUID } from "crypto";
 import type { ChatMessage } from "./intent.js";
+import type { LoadedDeck } from "../deck/types.js";
 
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -18,6 +19,8 @@ export interface Session {
   history: ChatMessage[];
   createdAt: Date;
   lastActiveAt: Date;
+  /** The deck loaded into this session, if any. */
+  loadedDeck?: LoadedDeck;
 }
 
 // ── Store ─────────────────────────────────────────────────────────────────────
@@ -84,17 +87,29 @@ export function deleteSession(sessionId: string): boolean {
   return sessions.delete(sessionId);
 }
 
+/** Attach or replace the loaded deck for a session. */
+export function setSessionDeck(session: Session, deck: LoadedDeck): void {
+  session.loadedDeck = deck;
+  session.lastActiveAt = new Date();
+}
+
 /** Return a serialisable snapshot of a session (no methods). */
 export function sessionSnapshot(session: Session): {
   id: string;
   messageCount: number;
   createdAt: string;
   lastActiveAt: string;
+  hasDeck: boolean;
+  deckCommanders: string[];
+  deckCardCount: number;
 } {
   return {
     id: session.id,
     messageCount: session.history.length,
     createdAt: session.createdAt.toISOString(),
     lastActiveAt: session.lastActiveAt.toISOString(),
+    hasDeck: session.loadedDeck !== undefined,
+    deckCommanders: session.loadedDeck?.commanders ?? [],
+    deckCardCount: session.loadedDeck?.cardCount ?? 0,
   };
 }
