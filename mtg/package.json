@@ -1,0 +1,21 @@
+{
+  "name": "mtg",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "ingest:scryfall": "tsx src/ingest/scryfall.ts",
+    "ingest:spellbook": "tsx src/ingest/spellbook.ts",
+    "tag": "tsx src/tagger/tag_set.ts"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.13",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}
