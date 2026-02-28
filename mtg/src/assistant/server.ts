@@ -165,21 +165,20 @@ app.post("/api/chat", async (req, res) => {
     // Store the assistant response in history
     addAssistantMessage(session, fullText);
 
-    // Collect all card names to linkify in the frontend.
-    // Start with names from the RAG retrieval result, then augment with any
-    // **bold** tokens in the LLM response that are confirmed real card names.
-    // Doing the DB lookup here (after streaming) keeps latency impact negligible
-    // and avoids false-positive tooltips on non-card bold text.
-    // In gooper mode the LLM response IS a comma-separated card list — parse it
-    // directly and validate against the DB, then merge with RAG results.
-    const gooperNames = responseMode === "gooper"
-      ? fullText.split(",").map((s) => s.trim()).filter(Boolean)
-      : [];
-
-    const retrievedCardNames = extractConfirmedCardNames(
-      fullText,
-      [...result.cards.map((c) => c.name), ...gooperNames],
-    );
+    // In gooper mode the LLM response IS the card list (plain CSV) — validate
+    // those names against the DB and use only them. Do NOT merge with RAG
+    // results; the whole point of gooper is a curated LLM-chosen set.
+    // In other modes, start with RAG results and augment with any **bold**
+    // card names the LLM added from its own knowledge.
+    const retrievedCardNames = responseMode === "gooper"
+      ? extractConfirmedCardNames(
+          "",  // no bold-scan needed — fullText has no markdown
+          fullText.split(",").map((s) => s.trim()).filter(Boolean),
+        )
+      : extractConfirmedCardNames(
+          fullText,
+          result.cards.map((c) => c.name),
+        );
 
     send("done", {
       sessionId: session.id,
