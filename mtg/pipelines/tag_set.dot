@@ -23,7 +23,7 @@ digraph tag_set {
   start      [shape=Mdiamond, label="Start"]
   tag_batch  [shape=parallelogram,
               label="Tag batch",
-              toolCommand="node mtg/dist/tagger/tag_set.js --set=SET_CODE --batch=20"]
+              tool_command="node mtg/dist/tagger/tag_set.js --set=SET_CODE --batch=20"]
   check_done [shape=diamond, label="More cards?"]
   exit       [shape=Msquare, label="Done"]
 
