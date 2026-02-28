@@ -71,12 +71,55 @@ app.post("/api/chat", async (req, res) => {
   addUserMessage(session, message.trim());
 
   try {
-    // Step 1: classify intent
-    const intent = await classifyIntent(message.trim(), session.history.slice(0, -1));
+    // Step 1: classify intent.
+    // If a deck is loaded, prefix the message with a brief deck summary so the
+    // intent classifier knows the commander and can resolve pronouns like "it",
+    // "my deck", "make it more competitive", etc.
+    const deck = session.loadedDeck;
+    const messageForClassifier = deck
+      ? `[Context: the user has loaded a Commander deck. Commander(s): ${deck.commanders.join(" / ")}. Total cards: ${deck.cardCount}.]\n\nUser message: ${message.trim()}`
+      : message.trim();
+
+    const intent = await classifyIntent(messageForClassifier, session.history.slice(0, -1));
+
+    // Fix 2: if the classifier didn't extract a commander but the session has
+    // a loaded deck, pull the commander directly from the deck. This ensures
+    // retrieveDeckBuild fires correctly for queries like "make it more competitive".
+    if (!intent.commander && deck?.commanders.length) {
+      intent.commander = deck.commanders[0] ?? null;
+    }
+    // Also seed colors from the deck if none were inferred
+    // (helps tag-search and deck-build retrieval target the right color identity)
+    if (intent.colors.length === 0 && deck) {
+      // Derive color identity from the deck's cards (union of all color identities)
+      const colorSet = new Set<string>();
+      for (const card of deck.cards) {
+        // We don't have color_identity here (that's a DB field), so we leave
+        // this for the retrieval layer to handle via the commander lookup.
+      }
+      void colorSet; // placeholder — retrieval uses commander to get color identity
+    }
+
     send("intent", intent);
 
-    // Step 2: retrieve relevant data
-    const result = await retrieve(intent);
+    // Step 2: retrieve relevant data.
+    // For power-assess and general intents on a deck-loaded session, promote to
+    // deck-build retrieval so we get commander combos + thematic cards rather
+    // than a generic card lookup that ignores the loaded deck.
+    const effectiveIntent = { ...intent };
+    if (deck && (intent.type === "power-assess" || intent.type === "general")) {
+      effectiveIntent.type = "deck-build";
+      // Carry themes from the user's question into the search query
+      if (!effectiveIntent.themes.includes("competitive")) {
+        const lc = message.toLowerCase();
+        if (lc.includes("competi")) effectiveIntent.themes = [...effectiveIntent.themes, "competitive", "optimized"];
+        if (lc.includes("budget")) effectiveIntent.themes = [...effectiveIntent.themes, "budget"];
+        if (lc.includes("combo")) effectiveIntent.themes = [...effectiveIntent.themes, "combo", "infinite"];
+        if (lc.includes("casual")) effectiveIntent.themes = [...effectiveIntent.themes, "casual"];
+      }
+      effectiveIntent.searchQuery = `${message.trim()} commander ${effectiveIntent.commander ?? ""}`.trim();
+    }
+    const result = await retrieve(effectiveIntent);
     send("retrieved", {
       cardCount: result.cards.length,
       comboCount: result.combos.length,
@@ -84,8 +127,8 @@ app.post("/api/chat", async (req, res) => {
     });
 
     // Step 3: build context block
-    const context = buildContext(result, intent);
-    const baseSystemPrompt = buildSystemPrompt(intent);
+    const context = buildContext(result, effectiveIntent);
+    const baseSystemPrompt = buildSystemPrompt(effectiveIntent);
     // Prepend deck context if a deck is loaded in this session
     const deckBlock = session.loadedDeck
       ? buildDeckSystemBlock(session.loadedDeck)

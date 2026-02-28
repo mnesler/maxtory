@@ -83,6 +83,26 @@ export async function loadDeckFromPaste(
   return body as unknown as LoadDeckResponse;
 }
 
+// ── Session health check ──────────────────────────────────────────────────────
+
+export interface SessionInfo {
+  id: string;
+  messageCount: number;
+  hasDeck: boolean;
+  deckCommanders: string[];
+  deckCardCount: number;
+}
+
+export async function checkSession(sessionId: string): Promise<SessionInfo | null> {
+  try {
+    const res = await fetch(`/api/chat/${sessionId}`);
+    if (!res.ok) return null;
+    return (await res.json()) as SessionInfo;
+  } catch {
+    return null;
+  }
+}
+
 // ── Chat (SSE streaming) ──────────────────────────────────────────────────────
 
 export interface ChatCallbacks {

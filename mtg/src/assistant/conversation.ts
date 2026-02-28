@@ -40,20 +40,27 @@ setInterval(() => {
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
-/** Create a new session and return its ID. */
-export function createSession(): Session {
-  const id = randomUUID();
+/** Create a new session and return its ID.
+ *  If an id is supplied, that exact id is used (allows the client to pre-assign
+ *  a UUID so deck-load and chat calls share the same session).
+ */
+export function createSession(id?: string): Session {
+  const sessionId = id ?? randomUUID();
   const session: Session = {
-    id,
+    id: sessionId,
     history: [],
     createdAt: new Date(),
     lastActiveAt: new Date(),
   };
-  sessions.set(id, session);
+  sessions.set(sessionId, session);
   return session;
 }
 
-/** Get an existing session by ID, or create a new one if not found. */
+/** Get an existing session by ID, or create a new one if not found.
+ *  When a sessionId is provided and not found (e.g. fresh server, session
+ *  expired) we create a new session using that SAME id so subsequent requests
+ *  from the client will continue to find it.
+ */
 export function getOrCreateSession(sessionId?: string): Session {
   if (sessionId) {
     const existing = sessions.get(sessionId);
@@ -61,6 +68,8 @@ export function getOrCreateSession(sessionId?: string): Session {
       existing.lastActiveAt = new Date();
       return existing;
     }
+    // Session not found — create one pinned to the client's id
+    return createSession(sessionId);
   }
   return createSession();
 }

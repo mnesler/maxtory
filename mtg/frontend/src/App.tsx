@@ -4,10 +4,11 @@
 //   Left  — DeckLoader (load from Moxfield URL or paste)
 //   Right — ChatWindow (RAG-powered assistant with deck context)
 
-import { createSignal } from "solid-js";
+import { createSignal, Show } from "solid-js";
 import DeckLoader from "./components/DeckLoader.jsx";
 import ChatWindow from "./components/ChatWindow.jsx";
-import type { LoadDeckResponse, DeckCard } from "./api/mtg.js";
+import type { LoadDeckResponse, DeckCard, SessionInfo } from "./api/mtg.js";
+import { checkSession } from "./api/mtg.js";
 import "./styles.css";
 
 // Generate a session ID once per page load so the deck and chat share the same
@@ -16,9 +17,22 @@ const SESSION_ID = crypto.randomUUID();
 
 export default function App() {
   const [deckInfo, setDeckInfo] = createSignal<LoadDeckResponse | null>(null);
+  const [sessionOk, setSessionOk] = createSignal<boolean | null>(null); // null=checking, true=ok, false=broken
 
-  function handleDeckLoaded(response: LoadDeckResponse, _cards: DeckCard[]) {
+  async function handleDeckLoaded(response: LoadDeckResponse, _cards: DeckCard[]) {
     setDeckInfo(response);
+    setSessionOk(null);
+
+    // Immediately verify the server-side session actually has the deck attached.
+    // This catches the most common failure mode: server was restarted between
+    // deck load and chat, so the in-memory session is gone.
+    const info: SessionInfo | null = await checkSession(SESSION_ID);
+    if (info?.hasDeck) {
+      setSessionOk(true);
+    } else {
+      setSessionOk(false);
+      console.warn("[session] Session check failed — hasDeck is false. Server may have restarted.", info);
+    }
   }
 
   return (
@@ -32,6 +46,26 @@ export default function App() {
         <div class="advisor-header-sub">
           AI-powered Commander deck analysis · Powered by RAG + Scryfall data
         </div>
+        {/* Session health indicator — only shown after a deck is loaded */}
+        <Show when={deckInfo() !== null}>
+          <div class="session-indicator">
+            <Show when={sessionOk() === null}>
+              <span class="session-badge session-checking">
+                <span class="spinner spinner-sm" /> verifying session…
+              </span>
+            </Show>
+            <Show when={sessionOk() === true}>
+              <span class="session-badge session-ok">
+                ● deck context active
+              </span>
+            </Show>
+            <Show when={sessionOk() === false}>
+              <span class="session-badge session-broken" title="The server may have restarted. Reload the page and re-load your deck.">
+                ⚠ session lost — reload page &amp; re-load deck
+              </span>
+            </Show>
+          </div>
+        </Show>
       </header>
 
       {/* Two-panel body */}
@@ -50,8 +84,9 @@ export default function App() {
           <div class="panel-title">Deck Advisor Chat</div>
           <ChatWindow
             sessionId={SESSION_ID}
-            deckLoaded={deckInfo() !== null}
+            deckLoaded={deckInfo() !== null && sessionOk() !== false}
             deckName={deckInfo()?.name}
+            sessionBroken={sessionOk() === false}
           />
         </main>
       </div>

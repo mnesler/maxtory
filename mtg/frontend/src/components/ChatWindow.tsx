@@ -53,6 +53,7 @@ interface Props {
   sessionId: string;
   deckLoaded: boolean;
   deckName?: string;
+  sessionBroken?: boolean;
 }
 
 export default function ChatWindow(props: Props) {
@@ -171,6 +172,13 @@ export default function ChatWindow(props: Props) {
 
   return (
     <div class="chat-window">
+      {/* Session broken banner */}
+      <Show when={props.sessionBroken}>
+        <div class="session-broken-banner">
+          ⚠ The server session was lost (server may have restarted). Please reload the page and re-load your deck before chatting.
+        </div>
+      </Show>
+
       {/* Message list */}
       <div class="chat-messages">
         <Show when={messages().length === 0}>
@@ -197,19 +205,21 @@ export default function ChatWindow(props: Props) {
           class="chat-input"
           rows={2}
           placeholder={
-            props.deckLoaded
+            props.sessionBroken
+              ? "Session lost — reload the page and re-load your deck"
+              : props.deckLoaded
               ? "Ask about your deck… (Enter to send, Shift+Enter for newline)"
               : "Load a deck first, then ask your questions here…"
           }
           value={input()}
           onInput={(e) => setInput(e.currentTarget.value)}
           onKeyDown={handleKeyDown}
-          disabled={streaming()}
+          disabled={streaming() || !!props.sessionBroken}
         />
         <button
           class="btn btn-primary send-btn"
           onClick={send}
-          disabled={streaming() || !input().trim()}
+          disabled={streaming() || !input().trim() || !!props.sessionBroken}
         >
           <Show when={streaming()} fallback="Send">
             <span class="spinner" />
