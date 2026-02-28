@@ -9,10 +9,10 @@
     "ingest:scryfall": "tsx src/ingest/scryfall.ts",
     "ingest:spellbook": "tsx src/ingest/spellbook.ts",
     "tag": "tsx src/tagger/tag_set.ts",
-    "embed:cards": "node --experimental-sqlite dist/assistant/embed.js",
-    "assistant": "node --experimental-sqlite dist/assistant/cli.js",
-    "assistant:serve": "node --experimental-sqlite dist/assistant/server.js",
-    "assistant:dev": "tsx --experimental-sqlite src/assistant/cli.ts"
+    "embed:cards": "node --experimental-sqlite --env-file=../backend/.env dist/assistant/embed.js",
+    "assistant": "node --experimental-sqlite --env-file=../backend/.env dist/assistant/cli.js",
+    "assistant:serve": "node --experimental-sqlite --env-file=../backend/.env dist/assistant/server.js",
+    "assistant:dev": "node --experimental-sqlite --env-file=../backend/.env --import tsx/esm src/assistant/cli.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",

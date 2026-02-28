@@ -272,18 +272,117 @@ async function retrieveComboFind(intent: Intent): Promise<{ cards: RetrievedCard
   return { cards: merged, combos };
 }
 
-async function retrieveTagSearch(intent: Intent): Promise<RetrievedCard[]> {
+// Map well-known tag names to oracle_text keywords for the text-based fallback.
+// This lets us do reasonable searches even when card_tags is empty.
+const TAG_KEYWORDS: Record<string, string[]> = {
+  removal:         ["destroy target", "exile target", "return target", "-1/-1", "damage to target creature"],
+  wipe:            ["destroy all", "exile all", "deals damage to all", "each creature gets -"],
+  ramp:            ["search your library for a", "land card", "add {", "mana to your"],
+  draw:            ["draw a card", "draw cards", "draw two", "draw three"],
+  counter:         ["counter target", "counter that", "countered"],
+  tutor:           ["search your library for a card", "search your library for any card"],
+  reanimation:     ["return target creature card from your graveyard", "from your graveyard to the battlefield"],
+  protection:      ["hexproof", "shroud", "indestructible", "protection from"],
+  "token-gen":     ["create a", "token", "put a", "token onto the battlefield"],
+  "combo-piece":   ["infinite", "untap all", "untap target", "each time"],
+  "win-condition": ["win the game", "loses the game", "damage equal to"],
+  stax:           ["each player can't", "can't cast", "players can't", "your opponents can't"],
+  mill:            ["put the top", "cards of your library into your graveyard", "mill"],
+  flicker:         ["exile target", "return it to the battlefield", "blink"],
+  "mana-rock":     ["add {", "{t}:", "artifact"],
+  "mana-dork":     ["{t}: add {", "creature"],
+  recursion:       ["return target", "from your graveyard"],
+  "land-fetch":    ["search your library for a", "land", "put it onto the battlefield"],
+  "extra-turn":    ["take an extra turn", "takes an extra turn"],
+  anthem:          ["other creatures you control get +", "creatures you control get +"],
+  cantrip:         ["draw a card"],
+};
+
+// Build a simple oracle_text LIKE filter from tags and themes.
+// Returns rows ordered by edhrec_rank with optional color filter applied in JS.
+async function retrieveTagSearchTextFallback(intent: Intent): Promise<RetrievedCard[]> {
   const db = getDb();
 
-  if (intent.tags.length === 0) {
-    // No tags — semantic fallback
+  // Collect all keyword phrases to search for
+  const keywordPhrases: string[] = [];
+  for (const tag of intent.tags) {
+    const kws = TAG_KEYWORDS[tag] ?? [tag];
+    keywordPhrases.push(...kws);
+  }
+  // Also include themes as free-form keywords
+  for (const theme of intent.themes) {
+    keywordPhrases.push(theme);
+  }
+
+  if (keywordPhrases.length === 0) {
+    // Absolutely nothing to go on — vector search or empty
     return hasEmbeddings() ? retrieveByVector(intent.searchQuery, 20) : [];
   }
 
+  // Build OR conditions for each keyword phrase
+  const conditions = keywordPhrases.map(() => "lower(c.oracle_text) LIKE ?").join(" OR ");
+  const params: string[] = keywordPhrases.map((kw) => `%${kw.toLowerCase()}%`);
+
+  // Optional CMC filter if the user mentioned budget/cheap
+  let cmcClause = "";
+  if (intent.budget) cmcClause = " AND c.cmc <= 3";
+
+  const sql = `
+    SELECT c.* FROM cards c
+    WHERE (${conditions})${cmcClause}
+    ORDER BY c.edhrec_rank ASC NULLS LAST
+    LIMIT 80
+  `;
+
+  const rows = db.prepare(sql).all(...params) as unknown as RawCard[];
+
+  // Post-filter by color identity
+  let filtered = rows;
+  if (intent.colors.length > 0) {
+    const allowed = new Set(intent.colors);
+    filtered = rows.filter((c) => {
+      const ci = jsonArr(c.color_identity);
+      // A colorless card (empty ci) is always allowed
+      if (ci.length === 0) return true;
+      return ci.every((color) => allowed.has(color));
+    });
+  }
+
+  const result = attachTags(filtered.slice(0, 30));
+
+  // If we got very few results, also blend in vector search
+  if (result.length < 10 && hasEmbeddings()) {
+    const vectorCards = await retrieveByVector(intent.searchQuery, 20);
+    return dedupeCards([...result, ...vectorCards]).slice(0, 30);
+  }
+
+  return result;
+}
+
+function isTagTableEmpty(): boolean {
+  const db = getDb();
+  const row = db.prepare("SELECT COUNT(*) as n FROM card_tags").get() as { n: number };
+  return row.n === 0;
+}
+
+async function retrieveTagSearch(intent: Intent): Promise<RetrievedCard[]> {
+  const db = getDb();
+
+  if (intent.tags.length === 0 && intent.themes.length === 0) {
+    // No tags, no themes — semantic fallback only
+    return hasEmbeddings() ? retrieveByVector(intent.searchQuery, 20) : [];
+  }
+
+  // If card_tags is empty, use the text-based keyword fallback
+  if (isTagTableEmpty()) {
+    return retrieveTagSearchTextFallback(intent);
+  }
+
+  // Normal path: card_tags is populated
   // Build color identity filter if colors provided
   // We load a broader set and post-filter in JS for correctness
   const tagPlaceholders = intent.tags.map(() => "?").join(",");
-  let query = `
+  const query = `
     SELECT DISTINCT c.* FROM cards c
     JOIN card_tags ct ON ct.oracle_id = c.oracle_id
     WHERE ct.tag IN (${tagPlaceholders})
@@ -302,7 +401,15 @@ async function retrieveTagSearch(intent: Intent): Promise<RetrievedCard[]> {
     });
   }
 
-  return attachTags(filtered.slice(0, 30));
+  const result = attachTags(filtered.slice(0, 30));
+
+  // Blend in vector search if available and we have room
+  if (result.length < 20 && hasEmbeddings()) {
+    const vectorCards = await retrieveByVector(intent.searchQuery, 20);
+    return dedupeCards([...result, ...vectorCards]).slice(0, 30);
+  }
+
+  return result;
 }
 
 async function retrieveByVector(query: string, topK: number): Promise<RetrievedCard[]> {
