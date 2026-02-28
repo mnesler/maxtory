@@ -64,11 +64,40 @@ body {
   font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.4px;
+  background: linear-gradient(
+    90deg,
+    #a855f7,
+    #6366f1,
+    #3b82f6,
+    #06b6d4,
+    #10b981,
+    #f59e0b,
+    #ef4444,
+    #a855f7
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: rhystic-gradient 8s ease infinite;
+  filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.4));
+}
+
+@keyframes rhystic-gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .advisor-header-sub {
   font-size: 12px;
   color: var(--text3);
+  animation: fade-breathe 4s ease-in-out infinite;
+}
+
+@keyframes fade-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
 }
 
 .advisor-body {
@@ -628,6 +657,7 @@ textarea:focus { border-color: var(--accent); }
   border-radius: var(--radius-sm);
   padding: 2px;
   gap: 2px;
+  margin-left: auto;
 }
 
 .mode-btn {

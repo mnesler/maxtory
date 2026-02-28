@@ -20,8 +20,8 @@ const SESSION_ID = crypto.randomUUID();
 
 const MODES: { value: ResponseMode; label: string; title: string }[] = [
   { value: "verbose",  label: "Full",   title: "Full explanations with detailed reasoning" },
-  { value: "succinct", label: "Snappy", title: "Shortest accurate answer, no padding" },
-  { value: "gooper",   label: "Gooper", title: "Gooper Mode — card art only, no text" },
+  { value: "succinct", label: "Snap",   title: "Shortest accurate answer, no padding" },
+  { value: "gooper",   label: "Goop",   title: "Goop Mode — card art only, no text" },
 ];
 
 export default function App() {
@@ -52,7 +52,7 @@ export default function App() {
           <span class="advisor-logo-text">Rhystic Study</span>
         </div>
         <div class="advisor-header-sub">
-          Did you pay the 1? · AI-powered Commander advisor
+          Did you pay the 1?
         </div>
 
         {/* Mode toggle */}
