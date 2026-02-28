@@ -20,6 +20,7 @@ import { createServer } from "http";
 import express from "express";
 import cors from "cors";
 import { warmCache } from "./vector.js";
+import { getDb } from "../db/client.js";
 import { classifyIntent } from "./intent.js";
 import { retrieve } from "./retrieve.js";
 import { buildContext, buildSystemPrompt, buildDeckSystemBlock } from "./context.js";
@@ -161,10 +162,20 @@ app.post("/api/chat", async (req, res) => {
     // Store the assistant response in history
     addAssistantMessage(session, fullText);
 
+    // Collect all card names to linkify in the frontend.
+    // Start with names from the RAG retrieval result, then augment with any
+    // **bold** tokens in the LLM response that are confirmed real card names.
+    // Doing the DB lookup here (after streaming) keeps latency impact negligible
+    // and avoids false-positive tooltips on non-card bold text.
+    const retrievedCardNames = extractConfirmedCardNames(
+      fullText,
+      result.cards.map((c) => c.name),
+    );
+
     send("done", {
       sessionId: session.id,
       fullText,
-      retrievedCardNames: result.cards.map((c) => c.name),
+      retrievedCardNames,
     });
   } catch (err) {
     send("error", err instanceof Error ? err.message : String(err));
@@ -193,6 +204,40 @@ app.delete("/api/chat/:sessionId", (req, res) => {
   const deleted = deleteSession(req.params.sessionId);
   res.json({ deleted });
 });
+
+// ── Card name extraction helper ───────────────────────────────────────────────
+//
+// After the LLM finishes streaming, scan its response for **bold** tokens and
+// validate each against the cards table.  Returns the union of RAG-retrieved
+// names and any confirmed bold names, deduplicated.
+
+function extractConfirmedCardNames(text: string, retrieved: string[]): string[] {
+  const db = getDb();
+
+  // Pull every **…** run from the response (card names are always bolded).
+  const boldRe = /\*\*([^*\n]{1,60})\*\*/g;
+  const candidates = new Set<string>();
+  let m: RegExpExecArray | null;
+  while ((m = boldRe.exec(text)) !== null) {
+    candidates.add(m[1]!.trim());
+  }
+
+  if (candidates.size === 0) {
+    // Nothing bold — just return the retrieved list
+    return [...new Set(retrieved)];
+  }
+
+  // Batch-confirm candidates against the DB (single indexed query).
+  const placeholders = [...candidates].map(() => "?").join(",");
+  const confirmed = db
+    .prepare(`SELECT name FROM cards WHERE name IN (${placeholders})`)
+    .all(...[...candidates]) as { name: string }[];
+
+  const confirmedNames = confirmed.map((r) => r.name);
+
+  // Merge and deduplicate, preserving retrieved names first
+  return [...new Set([...retrieved, ...confirmedNames])];
+}
 
 // ── POST /api/deck/load ───────────────────────────────────────────────────────
 //
