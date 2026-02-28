@@ -536,6 +536,57 @@ textarea:focus { border-color: var(--accent); }
 .markdown li { margin: 2px 0; }
 .markdown hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
 
+/* ── Card links & image tooltip ──────────────────────────────────────────── */
+
+/* Any element with data-card becomes a hoverable card link */
+.card-link {
+  cursor: pointer;
+  border-bottom: 1px dotted var(--accent);
+  transition: border-color 0.1s, color 0.1s;
+}
+
+.card-link:hover {
+  color: var(--accent-hover);
+  border-bottom-color: var(--accent-hover);
+}
+
+/* Inside user bubbles (white text) the dotted line should contrast */
+.chat-bubble-user .card-link {
+  border-bottom-color: rgba(255,255,255,0.5);
+  color: inherit;
+}
+
+.chat-bubble-user .card-link:hover {
+  border-bottom-color: white;
+  color: white;
+}
+
+/* Global floating tooltip — one in the DOM, repositioned by CardTooltip.tsx */
+#card-tooltip {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;        /* never blocks mouse events under it */
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4);
+  background: var(--bg3);      /* shows briefly while image loads */
+  width: 240px;
+  /* Fade in when shown */
+  animation: tooltip-fade 0.12s ease forwards;
+}
+
+#card-tooltip img {
+  display: block;
+  width: 240px;
+  height: auto;
+  border-radius: 10px;
+}
+
+@keyframes tooltip-fade {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
 /* ── Session health indicator ────────────────────────────────────────────── */
 
 .session-indicator {

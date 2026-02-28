@@ -43,6 +43,7 @@ export interface RetrievedData {
 export interface DoneData {
   sessionId: string;
   fullText: string;
+  retrievedCardNames: string[];
 }
 
 // ── Deck loading ──────────────────────────────────────────────────────────────

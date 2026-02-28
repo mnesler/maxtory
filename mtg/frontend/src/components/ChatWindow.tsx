@@ -29,6 +29,8 @@ interface Message {
   intent?: IntentData;
   retrieved?: RetrievedData;
   streaming?: boolean;
+  /** Card names the RAG retrieved — used to linkify mentions in the rendered text. */
+  cardNames?: string[];
 }
 
 // ── Intent badge colours ──────────────────────────────────────────────────────
@@ -102,12 +104,12 @@ export default function ChatWindow(props: Props) {
     });
   }
 
-  function finaliseLastAssistant(intent?: IntentData, retrieved?: RetrievedData) {
+  function finaliseLastAssistant(intent?: IntentData, retrieved?: RetrievedData, cardNames?: string[]) {
     setMessages((prev) => {
       const copy = [...prev];
       const last = copy[copy.length - 1];
       if (last?.role === "assistant") {
-        copy[copy.length - 1] = { ...last, streaming: false, intent, retrieved };
+        copy[copy.length - 1] = { ...last, streaming: false, intent, retrieved, cardNames };
       }
       return copy;
     });
@@ -129,13 +131,15 @@ export default function ChatWindow(props: Props) {
 
     let capturedIntent: IntentData | undefined;
     let capturedRetrieved: RetrievedData | undefined;
+    let capturedCardNames: string[] = [];
 
     cancelStream = streamChat(text, props.sessionId, {
       onIntent: (intent) => { capturedIntent = intent; },
       onRetrieved: (r) => { capturedRetrieved = r; },
       onToken: (token) => updateLastAssistantToken(token),
-      onDone: () => {
-        finaliseLastAssistant(capturedIntent, capturedRetrieved);
+      onDone: (done) => {
+        capturedCardNames = done.retrievedCardNames ?? [];
+        finaliseLastAssistant(capturedIntent, capturedRetrieved, capturedCardNames);
         setStreaming(false);
         cancelStream = null;
         setTimeout(() => inputRef?.focus(), 50);
@@ -284,7 +288,7 @@ function ChatMessage(props: { msg: Message }) {
       </Show>
 
       <div class="chat-bubble chat-bubble-assistant">
-        <Markdown text={msg.content} />
+        <Markdown text={msg.content} cardNames={msg.streaming ? [] : (msg.cardNames ?? [])} />
         <Show when={msg.streaming && !msg.content}>
           <span class="cursor-blink">▌</span>
         </Show>
@@ -296,11 +300,57 @@ function ChatMessage(props: { msg: Message }) {
 // ── Markdown renderer (lightweight) ──────────────────────────────────────────
 // Renders common markdown patterns without a full library dependency:
 // - **bold**, *italic*, `code`, ### headings, - bullet lists, blank line = paragraph
+//
+// After converting markdown to HTML, known card names are linkified:
+//   Sol Ring → <span class="card-link" data-card="Sol Ring">Sol Ring</span>
+// This is done as a post-pass over the final HTML string, only on settled
+// (non-streaming) messages.
 
-function Markdown(props: { text: string }) {
-  const html = () => markdownToHtml(props.text);
+function Markdown(props: { text: string; cardNames?: string[] }) {
+  const html = () => {
+    const base = markdownToHtml(props.text);
+    const names = props.cardNames;
+    if (!names || names.length === 0) return base;
+    return linkifyCardNames(base, names);
+  };
   // eslint-disable-next-line solid/no-innerhtml
   return <div class="markdown" innerHTML={html()} />;
+}
+
+// ── Card name linkifier ───────────────────────────────────────────────────────
+// Wraps known card names in the rendered HTML with <span class="card-link" data-card="...">
+// We operate on the HTML string, skipping content inside existing tags (attributes,
+// tag names) to avoid corrupting the markup.
+
+function linkifyCardNames(html: string, names: string[]): string {
+  if (names.length === 0) return html;
+
+  // Sort longest first so "Thassa's Oracle" matches before "Thassa"
+  const sorted = [...names].sort((a, b) => b.length - a.length);
+
+  // Build a regex that matches any of the card names, but only in text nodes
+  // (not inside HTML tags). We split on tag boundaries and only process text runs.
+  const escaped = sorted.map((n) =>
+    n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  );
+  const nameRe = new RegExp(`(${escaped.join("|")})`, "g");
+
+  // Split the HTML into [text, tag, text, tag, ...] segments
+  // Tags are <...> — we only linkify the text segments.
+  const TAG_RE = /(<[^>]+>)/g;
+  const parts = html.split(TAG_RE);
+
+  return parts
+    .map((part, i) => {
+      // Odd indices are tags — leave them alone
+      if (i % 2 === 1) return part;
+      // Even indices are text runs — linkify card names
+      return part.replace(nameRe, (match) => {
+        const safe = match.replace(/"/g, "&quot;");
+        return `<span class="card-link" data-card="${safe}">${match}</span>`;
+      });
+    })
+    .join("");
 }
 
 function markdownToHtml(text: string): string {

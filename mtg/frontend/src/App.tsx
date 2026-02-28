@@ -7,6 +7,7 @@
 import { createSignal, Show } from "solid-js";
 import DeckLoader from "./components/DeckLoader.jsx";
 import ChatWindow from "./components/ChatWindow.jsx";
+import CardTooltip from "./components/CardTooltip.jsx";
 import type { LoadDeckResponse, DeckCard, SessionInfo } from "./api/mtg.js";
 import { checkSession } from "./api/mtg.js";
 import "./styles.css";
@@ -37,6 +38,7 @@ export default function App() {
 
   return (
     <div class="advisor-layout">
+      <CardTooltip />
       {/* Header */}
       <header class="advisor-header">
         <div class="advisor-logo">

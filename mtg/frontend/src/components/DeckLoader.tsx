@@ -191,9 +191,11 @@ function DeckDisplay(props: DeckDisplayProps) {
           </div>
           <div class="deck-meta">
             <Show when={props.deck.commanders.length > 0}>
-              <span class="commander-badge">
-                {props.deck.commanders.join(" / ")}
-              </span>
+              <For each={props.deck.commanders}>
+                {(cmd) => (
+                  <span class="commander-badge card-link" data-card={cmd}>{cmd}</span>
+                )}
+              </For>
             </Show>
             <span class="card-count">{props.deck.cardCount} cards</span>
           </div>
@@ -233,7 +235,7 @@ function DeckDisplay(props: DeckDisplayProps) {
                   {(card) => (
                     <div class="card-item">
                       <span class="card-qty">{card.quantity}</span>
-                      <span class="card-name">{card.name}</span>
+                      <span class="card-link card-name" data-card={card.name}>{card.name}</span>
                     </div>
                   )}
                 </For>

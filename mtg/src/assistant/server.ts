@@ -161,7 +161,11 @@ app.post("/api/chat", async (req, res) => {
     // Store the assistant response in history
     addAssistantMessage(session, fullText);
 
-    send("done", { sessionId: session.id, fullText });
+    send("done", {
+      sessionId: session.id,
+      fullText,
+      retrievedCardNames: result.cards.map((c) => c.name),
+    });
   } catch (err) {
     send("error", err instanceof Error ? err.message : String(err));
   } finally {
