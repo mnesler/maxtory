@@ -1,0 +1,89 @@
+# ============================================================================
+# docker-compose-local.yml - Local Production Testing
+# ============================================================================
+# Build first: docker build -f backend/Dockerfile -t maxtory-backend .
+#               docker build -f mtg/Dockerfile -t maxtory-mtg .
+#               docker build -f mtg/frontend/Dockerfile -t maxtory-mtg-frontend .
+#               docker build -f frontend/Dockerfile -t maxtory-frontend .
+#
+# Run: docker-compose -f docker-compose-local.yml up
+# ============================================================================
+
+version: '3.8'
+
+services:
+  # ──────────────────────────────────────────────────────────────────────────
+  # Backend API (Attractor + OAuth)
+  # ──────────────────────────────────────────────────────────────────────────
+  backend:
+    image: maxtory-backend:latest
+    container_name: maxtory-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-min-32-chars}
+      - FRONTEND_URL=http://localhost:5174
+    volumes:
+      - ./backend/data:/app/backend/data
+    networks:
+      - maxtory-network
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # MTG Backend (Commander Deck Advisor)
+  # ──────────────────────────────────────────────────────────────────────────
+  mtg-backend:
+    image: maxtory-mtg:latest
+    container_name: maxtory-mtg-backend
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=development
+      - PORT=3002
+      - MTG_PORT=3002
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+    volumes:
+      - ./mtg/data:/app/mtg/data
+    networks:
+      - maxtory-network
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # MTG Frontend (Rhystic Study UI)
+  # ──────────────────────────────────────────────────────────────────────────
+  mtg-frontend:
+    image: maxtory-mtg-frontend:latest
+    container_name: maxtory-mtg-frontend
+    ports:
+      - "5174:8080"
+    environment:
+      - VITE_API_URL=http://localhost:3002
+    networks:
+      - maxtory-network
+    depends_on:
+      - mtg-backend
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Attractor Frontend
+  # ──────────────────────────────────────────────────────────────────────────
+  frontend:
+    image: maxtory-frontend:latest
+    container_name: maxtory-frontend
+    ports:
+      - "5173:8080"
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    networks:
+      - maxtory-network
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+networks:
+  maxtory-network:
+    driver: bridge

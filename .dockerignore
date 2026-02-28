@@ -77,10 +77,10 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Database files (managed separately via Cloud Storage)
-# The 315MB mtg.db should NOT be in the image
-mtg/data/*.db
-mtg/data/*.db-wal
-mtg/data/*.db-shm
+# NOTE: For local testing, we INCLUDE the database
+# mtg/data/*.db
+# mtg/data/*.db-wal
+# mtg/data/*.db-shm
 backend/data/*.db
 backend/data/*.db-wal
 backend/data/*.db-shm

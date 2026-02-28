@@ -40,10 +40,12 @@ RUN npm ci --workspace=mtg --include-workspace-root
 # ──────────────────────────────────────────────────────────────────────────
 FROM deps AS builder
 
-# Copy mtg source code
+# Copy mtg backend source code
 COPY mtg/tsconfig.json ./mtg/
-COPY mtg/vitest.config.ts ./mtg/
 COPY mtg/src ./mtg/src
+
+# Copy mtg frontend build (pre-built)
+COPY mtg/frontend/dist ./mtg/frontend/dist
 
 # Build TypeScript → JavaScript
 RUN npm run build --workspace=mtg
