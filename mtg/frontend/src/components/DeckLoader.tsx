@@ -63,10 +63,11 @@ export default function DeckLoader(props: Props) {
           return;
         }
         const response = await loadDeckFromMoxfield(url, props.sessionId);
+        const cards = response.cards ?? [];
         setLoadedDeck(response);
-        setLoadedCards([]); // Moxfield response doesn't return card list inline
+        setLoadedCards(cards);
         if (response.warnings?.length) setWarnings(response.warnings);
-        props.onDeckLoaded(response, []);
+        props.onDeckLoaded(response, cards);
       } else {
         const text = decklist().trim();
         if (!text) {
@@ -74,8 +75,8 @@ export default function DeckLoader(props: Props) {
           return;
         }
         const response = await loadDeckFromPaste(text, props.sessionId);
-        // Parse the paste locally to get the card list for display
-        const parsedCards = parseDecklistLocally(text);
+        // Prefer the server-parsed card list; fall back to local parse for display
+        const parsedCards = response.cards ?? parseDecklistLocally(text);
         setLoadedCards(parsedCards);
         setLoadedDeck(response);
         if (response.warnings?.length) setWarnings(response.warnings);

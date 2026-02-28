@@ -237,6 +237,7 @@ app.post("/api/deck/load", async (req, res) => {
         cardCount: deck.cardCount,
         name: deck.name,
         source: "moxfield",
+        cards: deck.cards,
       });
     } else if (decklist?.trim()) {
       const { deck, warnings } = parseDecklist(decklist.trim());
@@ -248,6 +249,7 @@ app.post("/api/deck/load", async (req, res) => {
         cardCount: deck.cardCount,
         source: "paste",
         warnings: warnings.length > 0 ? warnings : undefined,
+        cards: deck.cards,
       });
     }
   } catch (err) {

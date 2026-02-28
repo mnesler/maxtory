@@ -541,24 +541,36 @@ textarea:focus { border-color: var(--accent); }
 /* Any element with data-card becomes a hoverable card link */
 .card-link {
   cursor: pointer;
-  border-bottom: 1px dotted var(--accent);
+  color: #60a5fa;
+  border-bottom: 1px dotted #60a5fa;
   transition: border-color 0.1s, color 0.1s;
 }
 
 .card-link:hover {
-  color: var(--accent-hover);
-  border-bottom-color: var(--accent-hover);
+  color: #93c5fd;
+  border-bottom-color: #93c5fd;
 }
 
-/* Inside user bubbles (white text) the dotted line should contrast */
+/* Inside user bubbles (already coloured) keep links visually distinct */
 .chat-bubble-user .card-link {
-  border-bottom-color: rgba(255,255,255,0.5);
-  color: inherit;
+  color: rgba(255,255,255,0.9);
+  border-bottom-color: rgba(255,255,255,0.55);
 }
 
 .chat-bubble-user .card-link:hover {
-  border-bottom-color: white;
   color: white;
+  border-bottom-color: white;
+}
+
+/* Commander badge overrides — keep the purple pill style, just add cursor */
+.commander-badge.card-link {
+  color: var(--accent);
+  border-bottom: none;
+}
+
+.commander-badge.card-link:hover {
+  color: var(--accent-hover);
+  border-bottom: none;
 }
 
 /* Global floating tooltip — one in the DOM, repositioned by CardTooltip.tsx */

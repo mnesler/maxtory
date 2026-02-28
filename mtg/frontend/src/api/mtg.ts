@@ -18,6 +18,9 @@ export interface LoadDeckResponse {
   name?: string;
   source: "moxfield" | "paste";
   warnings?: string[];
+  /** Full card list — returned by the server so the deck panel can display and
+   *  linkify card names regardless of whether the deck came from Moxfield or paste. */
+  cards?: DeckCard[];
 }
 
 export interface ChatSSEEvent {
