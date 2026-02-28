@@ -17,6 +17,9 @@ function makeCard(overrides: Partial<RetrievedCard> = {}): RetrievedCard {
     colors: "[]",
     edhrec_rank: 1,
     rarity: "uncommon",
+    power: null,
+    toughness: null,
+    loyalty: null,
     tags: [],
     ...overrides,
   };

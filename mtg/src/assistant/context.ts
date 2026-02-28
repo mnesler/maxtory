@@ -24,6 +24,14 @@ function formatCard(card: RetrievedCard, includeVectorScore = false): string {
   lines.push(`### ${card.name}${costStr}${cmcStr}`);
   lines.push(`Type: ${card.type_line}`);
 
+  // Add power/toughness for creatures or loyalty for planeswalkers
+  if (card.power !== null && card.toughness !== null) {
+    lines.push(`Stats: ${card.power}/${card.toughness}`);
+  }
+  if (card.loyalty !== null) {
+    lines.push(`Loyalty: ${card.loyalty}`);
+  }
+
   if (card.oracle_text) {
     lines.push(`Text: ${card.oracle_text.trim()}`);
   }

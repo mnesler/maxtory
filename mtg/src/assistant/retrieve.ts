@@ -21,6 +21,9 @@ export interface RetrievedCard {
   colors: string;
   edhrec_rank: number | null;
   rarity: string | null;
+  power: string | null;
+  toughness: string | null;
+  loyalty: string | null;
   tags: string[];
   vectorScore?: number;
 }
@@ -54,6 +57,9 @@ interface RawCard {
   colors: string;
   edhrec_rank: number | null;
   rarity: string | null;
+  power: string | null;
+  toughness: string | null;
+  loyalty: string | null;
 }
 
 interface RawCombo {
