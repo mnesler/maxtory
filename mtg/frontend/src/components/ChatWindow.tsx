@@ -10,6 +10,7 @@
 import {
   createSignal,
   createEffect,
+  createMemo,
   For,
   Show,
   onMount,
@@ -237,22 +238,25 @@ export default function ChatWindow(props: Props) {
 // ── ChatMessage ───────────────────────────────────────────────────────────────
 
 function ChatMessage(props: { msg: Message }) {
-  const msg = props.msg;
+  // NOTE: do NOT destructure or snapshot `props.msg` into a local variable.
+  // SolidJS `For` reuses component instances when the item at a given index
+  // changes — it updates `props.msg` reactively. Accessing `props.msg`
+  // directly inside JSX expressions keeps those expressions reactive.
 
-  if (msg.role === "system") {
+  if (props.msg.role === "system") {
     return (
       <div class="chat-msg chat-msg-system">
         <span class="chat-msg-icon">◈</span>
-        <span>{msg.content}</span>
+        <span>{props.msg.content}</span>
       </div>
     );
   }
 
-  if (msg.role === "user") {
+  if (props.msg.role === "user") {
     return (
       <div class="chat-msg chat-msg-user">
         <div class="chat-bubble chat-bubble-user">
-          <Markdown text={msg.content} />
+          <Markdown text={props.msg.content} />
         </div>
       </div>
     );
@@ -262,9 +266,9 @@ function ChatMessage(props: { msg: Message }) {
   return (
     <div class="chat-msg chat-msg-assistant">
       {/* Meta bar: intent badge + retrieval stats */}
-      <Show when={msg.intent || msg.retrieved}>
+      <Show when={props.msg.intent || props.msg.retrieved}>
         <div class="chat-meta">
-          <Show when={msg.intent}>
+          <Show when={props.msg.intent}>
             {(intent) => (
               <span
                 class="intent-badge"
@@ -274,7 +278,7 @@ function ChatMessage(props: { msg: Message }) {
               </span>
             )}
           </Show>
-          <Show when={msg.retrieved}>
+          <Show when={props.msg.retrieved}>
             {(r) => (
               <span class="retrieval-stats">
                 {r().cardCount} cards · {r().comboCount} combos
@@ -288,8 +292,11 @@ function ChatMessage(props: { msg: Message }) {
       </Show>
 
       <div class="chat-bubble chat-bubble-assistant">
-        <Markdown text={msg.content} cardNames={msg.streaming ? [] : (msg.cardNames ?? [])} />
-        <Show when={msg.streaming && !msg.content}>
+        <Markdown
+          text={props.msg.content}
+          cardNames={props.msg.streaming ? [] : (props.msg.cardNames ?? [])}
+        />
+        <Show when={props.msg.streaming && !props.msg.content}>
           <span class="cursor-blink">▌</span>
         </Show>
       </div>
@@ -307,12 +314,14 @@ function ChatMessage(props: { msg: Message }) {
 // (non-streaming) messages.
 
 function Markdown(props: { text: string; cardNames?: string[] }) {
-  const html = () => {
+  // Use createMemo so SolidJS tracks both `props.text` and `props.cardNames`
+  // as reactive dependencies and re-runs when either changes.
+  const html = createMemo(() => {
     const base = markdownToHtml(props.text);
     const names = props.cardNames;
     if (!names || names.length === 0) return base;
     return linkifyCardNames(base, names);
-  };
+  });
   // eslint-disable-next-line solid/no-innerhtml
   return <div class="markdown" innerHTML={html()} />;
 }
