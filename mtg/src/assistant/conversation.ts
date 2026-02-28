@@ -1,0 +1,100 @@
+// Multi-turn conversation session management.
+//
+// Sessions are held in memory — they don't survive server restarts.
+// Each session stores the full message history so the LLM has context
+// for follow-up questions ("now make it budget", "what about adding X?").
+//
+// Sessions expire after IDLE_TIMEOUT_MS of inactivity to avoid unbounded growth.
+
+import { randomUUID } from "crypto";
+import type { ChatMessage } from "./intent.js";
+
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+export interface Session {
+  id: string;
+  history: ChatMessage[];
+  createdAt: Date;
+  lastActiveAt: Date;
+}
+
+// ── Store ─────────────────────────────────────────────────────────────────────
+
+const sessions = new Map<string, Session>();
+
+// ── Cleanup timer ─────────────────────────────────────────────────────────────
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, session] of sessions) {
+    if (now - session.lastActiveAt.getTime() > IDLE_TIMEOUT_MS) {
+      sessions.delete(id);
+    }
+  }
+}, 5 * 60 * 1000); // Run cleanup every 5 minutes
+
+// ── Public API ────────────────────────────────────────────────────────────────
+
+/** Create a new session and return its ID. */
+export function createSession(): Session {
+  const id = randomUUID();
+  const session: Session = {
+    id,
+    history: [],
+    createdAt: new Date(),
+    lastActiveAt: new Date(),
+  };
+  sessions.set(id, session);
+  return session;
+}
+
+/** Get an existing session by ID, or create a new one if not found. */
+export function getOrCreateSession(sessionId?: string): Session {
+  if (sessionId) {
+    const existing = sessions.get(sessionId);
+    if (existing) {
+      existing.lastActiveAt = new Date();
+      return existing;
+    }
+  }
+  return createSession();
+}
+
+/** Get a session by ID. Returns undefined if not found. */
+export function getSession(sessionId: string): Session | undefined {
+  return sessions.get(sessionId);
+}
+
+/** Append a user message to the session history. */
+export function addUserMessage(session: Session, content: string): void {
+  session.history.push({ role: "user", content });
+  session.lastActiveAt = new Date();
+}
+
+/** Append an assistant message to the session history. */
+export function addAssistantMessage(session: Session, content: string): void {
+  session.history.push({ role: "assistant", content });
+  session.lastActiveAt = new Date();
+}
+
+/** Delete a session. */
+export function deleteSession(sessionId: string): boolean {
+  return sessions.delete(sessionId);
+}
+
+/** Return a serialisable snapshot of a session (no methods). */
+export function sessionSnapshot(session: Session): {
+  id: string;
+  messageCount: number;
+  createdAt: string;
+  lastActiveAt: string;
+} {
+  return {
+    id: session.id,
+    messageCount: session.history.length,
+    createdAt: session.createdAt.toISOString(),
+    lastActiveAt: session.lastActiveAt.toISOString(),
+  };
+}

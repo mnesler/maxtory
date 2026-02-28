@@ -9,6 +9,9 @@
     "test:backend": "npm run test --workspace=backend",
     "test:frontend": "npm run test --workspace=frontend",
     "ingest:scryfall": "npm run ingest:scryfall --workspace=mtg",
-    "ingest:spellbook": "npm run ingest:spellbook --workspace=mtg"
+    "ingest:spellbook": "npm run ingest:spellbook --workspace=mtg",
+    "embed:cards": "npm run embed:cards --workspace=mtg",
+    "assistant": "npm run assistant --workspace=mtg",
+    "assistant:serve": "npm run assistant:serve --workspace=mtg"
   }
 }

@@ -79,5 +79,17 @@ export function applySchema(db: DatabaseSync): void {
       cards_tagged INTEGER DEFAULT 0,
       status       TEXT NOT NULL DEFAULT 'running' -- running|completed|failed
     );
+
+    -- ── Card Embeddings ───────────────────────────────────────────────────────
+    -- One row per card. Stores the raw float32 embedding as a BLOB.
+    -- model = the embedding model ID used (e.g. "openai/text-embedding-3-small")
+    -- Re-run the embed script with a different model to update these rows.
+    CREATE TABLE IF NOT EXISTS card_embeddings (
+      oracle_id   TEXT PRIMARY KEY REFERENCES cards(oracle_id) ON DELETE CASCADE,
+      model       TEXT NOT NULL,
+      embedding   BLOB NOT NULL,                   -- Float32Array serialised to buffer
+      dims        INTEGER NOT NULL,                -- vector dimensions (e.g. 1536)
+      created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 }
