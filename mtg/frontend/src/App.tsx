@@ -5,11 +5,13 @@
 //   Right — ChatWindow (RAG-powered assistant with deck context)
 
 import { createSignal, Show } from "solid-js";
+import { useNavigate } from "@solidjs/router";
 import DeckLoader from "./components/DeckLoader.jsx";
 import ChatWindow from "./components/ChatWindow.jsx";
 import CardTooltip from "./components/CardTooltip.jsx";
 import type { LoadDeckResponse, DeckCard, SessionInfo, ResponseMode } from "./api/mtg.js";
 import { checkSession } from "./api/mtg.js";
+import { useAuth } from "./context/AuthContext";
 import "./styles.css";
 
 // Generate a session ID once per page load so the deck and chat share the same
@@ -25,9 +27,16 @@ const MODES: { value: ResponseMode; label: string; title: string }[] = [
 ];
 
 export default function App() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [deckInfo, setDeckInfo] = createSignal<LoadDeckResponse | null>(null);
   const [sessionOk, setSessionOk] = createSignal<boolean | null>(null);
   const [mode, setMode] = createSignal<ResponseMode>("succinct");
+
+  async function handleLogout() {
+    await logout();
+    navigate("/", { replace: true });
+  }
 
   async function handleDeckLoaded(response: LoadDeckResponse, _cards: DeckCard[]) {
     setDeckInfo(response);
@@ -67,6 +76,35 @@ export default function App() {
             </button>
           ))}
         </div>
+
+        {/* User info and logout */}
+        <Show when={user()}>
+          <div class="user-info" style={{ display: "flex", "align-items": "center", gap: "12px", "margin-left": "16px" }}>
+            <Show when={user()?.avatar}>
+              <img
+                src={user()!.avatar}
+                alt={user()!.name}
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  "border-radius": "50%",
+                  border: "2px solid var(--accent)",
+                }}
+              />
+            </Show>
+            <span style={{ "font-size": "13px", color: "var(--text2)" }}>
+              {user()!.name}
+            </span>
+            <button
+              class="btn-ghost btn-sm"
+              onClick={handleLogout}
+              title="Logout"
+              style={{ "margin-left": "8px" }}
+            >
+              Logout
+            </button>
+          </div>
+        </Show>
 
         {/* Session health indicator — only shown after a deck is loaded */}
         <Show when={deckInfo() !== null}>

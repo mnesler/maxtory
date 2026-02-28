@@ -2,6 +2,7 @@
 
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import { createServer } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { PipelineEngine } from "../pipeline/engine.js";
@@ -9,6 +10,10 @@ import { WaitForHumanHandler } from "../pipeline/handlers.js";
 import type { PipelineEvent } from "../pipeline/types.js";
 import type { Client } from "../llm/client.js";
 import { Message } from "../llm/client.js";
+import passport from "../auth/strategies.js";
+import { signAccessToken, signRefreshToken, verifyToken } from "../auth/jwt.js";
+import { requireAuth } from "../auth/middleware.js";
+import type { User } from "../auth/db.js";
 
 export interface AppSettings {
   model: string;
@@ -31,8 +36,120 @@ export const OPENROUTER_MODELS = [
 
 export function createApp(engine: PipelineEngine, settings: AppSettings, llmClient?: Client) {
   const app = express();
-  app.use(cors());
+  app.use(cors({
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    credentials: true,
+  }));
   app.use(express.json({ limit: "2mb" }));
+  app.use(cookieParser());
+  app.use(passport.initialize());
+
+  // ── Authentication ───────────────────────────────────────────────────────────
+
+  const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+
+  // Google OAuth
+  app.get("/auth/google", passport.authenticate("google", { session: false }));
+
+  app.get(
+    "/auth/google/callback",
+    passport.authenticate("google", { session: false, failureRedirect: `${FRONTEND_URL}?error=google_auth_failed` }),
+    (req, res) => {
+      const user = req.user as User;
+      const accessToken = signAccessToken({
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        avatar: user.avatar,
+      });
+      const refreshToken = signRefreshToken({
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        avatar: user.avatar,
+      });
+
+      // Set refresh token as httpOnly cookie (more secure)
+      res.cookie("refresh_token", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      });
+
+      // Redirect to frontend with access token in URL (will be stored in localStorage)
+      res.redirect(`${FRONTEND_URL}/auth?token=${accessToken}`);
+    }
+  );
+
+  // GitHub OAuth
+  app.get("/auth/github", passport.authenticate("github", { session: false, scope: ["user:email"] }));
+
+  app.get(
+    "/auth/github/callback",
+    passport.authenticate("github", { session: false, failureRedirect: `${FRONTEND_URL}?error=github_auth_failed` }),
+    (req, res) => {
+      const user = req.user as User;
+      const accessToken = signAccessToken({
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        avatar: user.avatar,
+      });
+      const refreshToken = signRefreshToken({
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        avatar: user.avatar,
+      });
+
+      res.cookie("refresh_token", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      });
+
+      res.redirect(`${FRONTEND_URL}/auth?token=${accessToken}`);
+    }
+  );
+
+  // Get current user
+  app.get("/auth/me", requireAuth, (req, res) => {
+    res.json(req.authUser);
+  });
+
+  // Refresh access token using refresh token
+  app.post("/auth/refresh", (req, res) => {
+    try {
+      const refreshToken = req.cookies.refresh_token || req.body.refreshToken;
+      if (!refreshToken) {
+        return res.status(401).json({ error: "No refresh token provided" });
+      }
+
+      const payload = verifyToken(refreshToken);
+      if (payload.type !== "refresh") {
+        return res.status(401).json({ error: "Invalid token type" });
+      }
+
+      const newAccessToken = signAccessToken({
+        userId: payload.userId,
+        email: payload.email,
+        name: payload.name,
+        avatar: payload.avatar,
+      });
+
+      res.json({ accessToken: newAccessToken });
+    } catch {
+      res.status(401).json({ error: "Invalid or expired refresh token" });
+    }
+  });
+
+  // Logout (clear cookies)
+  app.post("/auth/logout", (_req, res) => {
+    res.clearCookie("refresh_token");
+    res.json({ success: true });
+  });
 
   // ── Runs ─────────────────────────────────────────────────────────────────────
 
