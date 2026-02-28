@@ -599,6 +599,121 @@ textarea:focus { border-color: var(--accent); }
   to   { opacity: 1; transform: scale(1); }
 }
 
+/* ── Mode toggle ─────────────────────────────────────────────────────────── */
+
+.mode-toggle {
+  display: flex;
+  align-items: center;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  gap: 2px;
+}
+
+.mode-btn {
+  padding: 4px 12px;
+  border-radius: 3px;
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.mode-btn:hover { background: var(--bg4); color: var(--text); }
+
+.mode-btn-active {
+  background: var(--accent);
+  color: white;
+}
+
+.mode-btn-active:hover { background: var(--accent-hover); color: white; }
+
+/* Gooper button gets a special shimmer highlight when active */
+.mode-btn-gooper.mode-btn-active {
+  background: linear-gradient(90deg, #7c3aed, #a855f7, #7c3aed);
+  background-size: 200% 100%;
+  animation: gooper-btn-pulse 2s ease infinite;
+  color: white;
+}
+
+@keyframes gooper-btn-pulse {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ── Gooper Mode — card art grid ─────────────────────────────────────────── */
+
+.gooper-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 4px 0;
+  max-width: 100%;
+}
+
+.gooper-card {
+  width: 180px;
+  height: 130px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  position: relative;
+  background: var(--bg3);
+  cursor: pointer;
+}
+
+.gooper-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gooper-card:hover .gooper-img {
+  transform: scale(1.04);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+/* Shimmer animation — shown before image loads, and for placeholders */
+.gooper-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.gooper-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255,255,255,0.06) 40%,
+    rgba(255,255,255,0.12) 50%,
+    rgba(255,255,255,0.06) 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: gooper-shimmer 1.4s ease infinite;
+}
+
+/* When a gooper-card has the shimmer class, also hide the img until loaded */
+.gooper-card.gooper-shimmer .gooper-img {
+  opacity: 0;
+}
+
+@keyframes gooper-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
 /* ── Session health indicator ────────────────────────────────────────────── */
 
 .session-indicator {

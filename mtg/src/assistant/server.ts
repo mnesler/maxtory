@@ -24,6 +24,7 @@ import { getDb } from "../db/client.js";
 import { classifyIntent } from "./intent.js";
 import { retrieve } from "./retrieve.js";
 import { buildContext, buildSystemPrompt, buildDeckSystemBlock } from "./context.js";
+import type { ResponseMode } from "./context.js";
 import { streamAnswer } from "./answer.js";
 import {
   getOrCreateSession,
@@ -48,9 +49,10 @@ app.use(express.json({ limit: "512kb" }));
 // ── POST /api/chat ─────────────────────────────────────────────────────────────
 
 app.post("/api/chat", async (req, res) => {
-  const { message, sessionId } = req.body as {
+  const { message, sessionId, mode } = req.body as {
     message?: string;
     sessionId?: string;
+    mode?: ResponseMode;
   };
 
   if (!message?.trim()) {
@@ -129,7 +131,8 @@ app.post("/api/chat", async (req, res) => {
 
     // Step 3: build context block
     const context = buildContext(result, effectiveIntent);
-    const baseSystemPrompt = buildSystemPrompt(effectiveIntent);
+    const responseMode: ResponseMode = mode === "verbose" || mode === "gooper" ? mode : "succinct";
+    const baseSystemPrompt = buildSystemPrompt(effectiveIntent, responseMode);
     // Prepend deck context if a deck is loaded in this session
     const deckBlock = session.loadedDeck
       ? buildDeckSystemBlock(session.loadedDeck)
@@ -167,15 +170,22 @@ app.post("/api/chat", async (req, res) => {
     // **bold** tokens in the LLM response that are confirmed real card names.
     // Doing the DB lookup here (after streaming) keeps latency impact negligible
     // and avoids false-positive tooltips on non-card bold text.
+    // In gooper mode the LLM response IS a comma-separated card list — parse it
+    // directly and validate against the DB, then merge with RAG results.
+    const gooperNames = responseMode === "gooper"
+      ? fullText.split(",").map((s) => s.trim()).filter(Boolean)
+      : [];
+
     const retrievedCardNames = extractConfirmedCardNames(
       fullText,
-      result.cards.map((c) => c.name),
+      [...result.cards.map((c) => c.name), ...gooperNames],
     );
 
     send("done", {
       sessionId: session.id,
       fullText,
       retrievedCardNames,
+      mode: responseMode,
     });
   } catch (err) {
     send("error", err instanceof Error ? err.message : String(err));

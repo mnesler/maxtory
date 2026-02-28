@@ -180,7 +180,27 @@ export function buildDeckSystemBlock(deck: LoadedDeck): string {
   ].join("\n");
 }
 
-export function buildSystemPrompt(intent: Intent): string {
+export type ResponseMode = "succinct" | "verbose" | "gooper";
+
+export function buildSystemPrompt(intent: Intent, mode: ResponseMode = "succinct"): string {
+  // Gooper mode: LLM returns only card names, no prose.
+  if (mode === "gooper") {
+    return [
+      "You are an expert Magic: The Gathering Commander assistant.",
+      "",
+      "IMPORTANT: Your response must be ONLY a plain comma-separated list of Magic card names",
+      "that are relevant to the user's question. No prose, no explanations, no markdown,",
+      "no bullet points, no numbers — just card names separated by commas.",
+      "Example output: Sol Ring, Arcane Signet, Cultivate, Kodama's Reach",
+      "If you reference a card, use its exact printed name.",
+      "Return at least 4 and at most 20 card names.",
+    ].join("\n");
+  }
+
+  const verbosityGuideline = mode === "verbose"
+    ? "- Be thorough. Provide full explanations with clear reasoning for every recommendation."
+    : "- Be as succinct as possible. Shortest accurate answer wins — no padding, no preamble, no restating the question.";
+
   const base = [
     "You are an expert Magic: The Gathering Commander assistant.",
     "You have deep knowledge of MTG rules, card interactions, deck archetypes,",
@@ -191,12 +211,12 @@ export function buildSystemPrompt(intent: Intent): string {
     "- If you reference a card, use its exact printed name.",
     "- For deck suggestions, explain WHY each card is recommended.",
     "- For combos, explain the combo pieces and how they interact step by step.",
-    "- Be as succinct as possible. Shortest accurate answer wins — no padding, no preamble, no restating the question.",
+    verbosityGuideline,
     "- Use markdown formatting for readability.",
     "- If you're unsure about something, say so — don't invent rules or card text.",
   ].join("\n");
 
-  // Intent-specific addenda
+  // Intent-specific addenda (not applied in gooper mode — already handled above)
   const addenda: Record<string, string> = {
     "deck-build": "\n\nWhen building a deck list, organise cards by category (ramp, draw, removal, combo, etc.) and aim for 99 cards plus the commander.",
     "combo-find": "\n\nWhen explaining combos, list each required piece, the steps to assemble it, what it produces, and how to win from that position.",

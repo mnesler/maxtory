@@ -43,10 +43,13 @@ export interface RetrievedData {
   hasEmbeddings: boolean;
 }
 
+export type ResponseMode = "succinct" | "verbose" | "gooper";
+
 export interface DoneData {
   sessionId: string;
   fullText: string;
   retrievedCardNames: string[];
+  mode?: ResponseMode;
 }
 
 // ── Deck loading ──────────────────────────────────────────────────────────────
@@ -124,7 +127,8 @@ export interface ChatCallbacks {
 export function streamChat(
   message: string,
   sessionId: string,
-  callbacks: ChatCallbacks
+  callbacks: ChatCallbacks,
+  mode: ResponseMode = "succinct",
 ): () => void {
   const controller = new AbortController();
 
@@ -134,7 +138,7 @@ export function streamChat(
       res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, sessionId }),
+        body: JSON.stringify({ message, sessionId, mode }),
         signal: controller.signal,
       });
     } catch (err) {

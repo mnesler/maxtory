@@ -6,6 +6,8 @@
 //   - Shows retrieval stats (N cards, M combos)
 //   - Auto-scrolls to the latest message
 //   - Supports multi-turn (session is maintained server-side)
+//   - Three response modes: succinct | verbose | gooper
+//     Gooper mode renders full card art images instead of text.
 
 import {
   createSignal,
@@ -17,7 +19,7 @@ import {
   onCleanup,
 } from "solid-js";
 import { streamChat } from "../api/mtg.js";
-import type { IntentData, RetrievedData } from "../api/mtg.js";
+import type { IntentData, RetrievedData, ResponseMode } from "../api/mtg.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -32,6 +34,8 @@ interface Message {
   streaming?: boolean;
   /** Card names the RAG retrieved — used to linkify mentions in the rendered text. */
   cardNames?: string[];
+  /** The mode that was active when this message was sent. */
+  mode?: ResponseMode;
 }
 
 // ── Intent badge colours ──────────────────────────────────────────────────────
@@ -45,6 +49,11 @@ const INTENT_COLORS: Record<string, string> = {
   "general":      "#64748b",
 };
 
+// ── Scryfall art crop URL ─────────────────────────────────────────────────────
+
+const SCRYFALL_ART = (name: string) =>
+  `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}&format=image&version=art_crop`;
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 let msgCounter = 0;
@@ -57,6 +66,7 @@ interface Props {
   deckLoaded: boolean;
   deckName?: string;
   sessionBroken?: boolean;
+  mode: ResponseMode;
 }
 
 export default function ChatWindow(props: Props) {
@@ -105,12 +115,12 @@ export default function ChatWindow(props: Props) {
     });
   }
 
-  function finaliseLastAssistant(intent?: IntentData, retrieved?: RetrievedData, cardNames?: string[]) {
+  function finaliseLastAssistant(intent?: IntentData, retrieved?: RetrievedData, cardNames?: string[], mode?: ResponseMode) {
     setMessages((prev) => {
       const copy = [...prev];
       const last = copy[copy.length - 1];
       if (last?.role === "assistant") {
-        copy[copy.length - 1] = { ...last, streaming: false, intent, retrieved, cardNames };
+        copy[copy.length - 1] = { ...last, streaming: false, intent, retrieved, cardNames, mode };
       }
       return copy;
     });
@@ -128,7 +138,7 @@ export default function ChatWindow(props: Props) {
 
     // Add placeholder assistant message that will be streamed into
     const assistantId = uid();
-    appendMessage({ id: assistantId, role: "assistant", content: "", streaming: true });
+    appendMessage({ id: assistantId, role: "assistant", content: "", streaming: true, mode: props.mode });
 
     let capturedIntent: IntentData | undefined;
     let capturedRetrieved: RetrievedData | undefined;
@@ -140,7 +150,7 @@ export default function ChatWindow(props: Props) {
       onToken: (token) => updateLastAssistantToken(token),
       onDone: (done) => {
         capturedCardNames = done.retrievedCardNames ?? [];
-        finaliseLastAssistant(capturedIntent, capturedRetrieved, capturedCardNames);
+        finaliseLastAssistant(capturedIntent, capturedRetrieved, capturedCardNames, props.mode);
         setStreaming(false);
         cancelStream = null;
         setTimeout(() => inputRef?.focus(), 50);
@@ -161,7 +171,7 @@ export default function ChatWindow(props: Props) {
         setStreaming(false);
         cancelStream = null;
       },
-    });
+    }, props.mode);
   }
 
   function handleKeyDown(e: KeyboardEvent) {
@@ -238,11 +248,6 @@ export default function ChatWindow(props: Props) {
 // ── ChatMessage ───────────────────────────────────────────────────────────────
 
 function ChatMessage(props: { msg: Message }) {
-  // NOTE: do NOT destructure or snapshot `props.msg` into a local variable.
-  // SolidJS `For` reuses component instances when the item at a given index
-  // changes — it updates `props.msg` reactively. Accessing `props.msg`
-  // directly inside JSX expressions keeps those expressions reactive.
-
   if (props.msg.role === "system") {
     return (
       <div class="chat-msg chat-msg-system">
@@ -262,11 +267,13 @@ function ChatMessage(props: { msg: Message }) {
     );
   }
 
-  // Assistant
+  // Assistant — gooper mode renders a card art grid instead of text
+  const isGooper = props.msg.mode === "gooper";
+
   return (
     <div class="chat-msg chat-msg-assistant">
-      {/* Meta bar: intent badge + retrieval stats */}
-      <Show when={props.msg.intent || props.msg.retrieved}>
+      {/* Meta bar: intent badge + retrieval stats — hidden in gooper mode */}
+      <Show when={!isGooper && (props.msg.intent || props.msg.retrieved)}>
         <div class="chat-meta">
           <Show when={props.msg.intent}>
             {(intent) => (
@@ -291,31 +298,81 @@ function ChatMessage(props: { msg: Message }) {
         </div>
       </Show>
 
-      <div class="chat-bubble chat-bubble-assistant">
-        <Markdown
-          text={props.msg.content}
-          cardNames={props.msg.streaming ? [] : (props.msg.cardNames ?? [])}
+      <Show
+        when={isGooper}
+        fallback={
+          <div class="chat-bubble chat-bubble-assistant">
+            <Markdown
+              text={props.msg.content}
+              cardNames={props.msg.streaming ? [] : (props.msg.cardNames ?? [])}
+            />
+            <Show when={props.msg.streaming && !props.msg.content}>
+              <span class="cursor-blink">▌</span>
+            </Show>
+          </div>
+        }
+      >
+        <GooperGrid
+          cardNames={props.msg.cardNames ?? []}
+          streaming={!!props.msg.streaming}
         />
-        <Show when={props.msg.streaming && !props.msg.content}>
-          <span class="cursor-blink">▌</span>
-        </Show>
-      </div>
+      </Show>
     </div>
   );
 }
 
+// ── GooperGrid ────────────────────────────────────────────────────────────────
+// Renders a grid of full card art images with shimmer-on-load animation.
+// While streaming (before done fires), shows placeholder shimmer boxes.
+
+function GooperGrid(props: { cardNames: string[]; streaming: boolean }) {
+  return (
+    <div class="gooper-grid">
+      <Show
+        when={!props.streaming && props.cardNames.length > 0}
+        fallback={
+          // Shimmer placeholders while waiting
+          <For each={[1, 2, 3, 4, 5]}>
+            {() => <div class="gooper-card gooper-shimmer" />}
+          </For>
+        }
+      >
+        <For each={props.cardNames}>
+          {(name) => <GooperCard name={name} />}
+        </For>
+      </Show>
+    </div>
+  );
+}
+
+// ── GooperCard ────────────────────────────────────────────────────────────────
+
+function GooperCard(props: { name: string }) {
+  const [loaded, setLoaded] = createSignal(false);
+  const [errored, setErrored] = createSignal(false);
+
+  return (
+    <Show when={!errored()}>
+      <div
+        class={`gooper-card${loaded() ? "" : " gooper-shimmer"}`}
+        title={props.name}
+        data-card={props.name}
+      >
+        <img
+          src={SCRYFALL_ART(props.name)}
+          alt={props.name}
+          class="gooper-img"
+          onLoad={() => setLoaded(true)}
+          onError={() => setErrored(true)}
+        />
+      </div>
+    </Show>
+  );
+}
+
 // ── Markdown renderer (lightweight) ──────────────────────────────────────────
-// Renders common markdown patterns without a full library dependency:
-// - **bold**, *italic*, `code`, ### headings, - bullet lists, blank line = paragraph
-//
-// After converting markdown to HTML, known card names are linkified:
-//   Sol Ring → <span class="card-link" data-card="Sol Ring">Sol Ring</span>
-// This is done as a post-pass over the final HTML string, only on settled
-// (non-streaming) messages.
 
 function Markdown(props: { text: string; cardNames?: string[] }) {
-  // Use createMemo so SolidJS tracks both `props.text` and `props.cardNames`
-  // as reactive dependencies and re-runs when either changes.
   const html = createMemo(() => {
     const base = markdownToHtml(props.text);
     const names = props.cardNames;
@@ -327,33 +384,22 @@ function Markdown(props: { text: string; cardNames?: string[] }) {
 }
 
 // ── Card name linkifier ───────────────────────────────────────────────────────
-// Wraps known card names in the rendered HTML with <span class="card-link" data-card="...">
-// We operate on the HTML string, skipping content inside existing tags (attributes,
-// tag names) to avoid corrupting the markup.
 
 function linkifyCardNames(html: string, names: string[]): string {
   if (names.length === 0) return html;
 
-  // Sort longest first so "Thassa's Oracle" matches before "Thassa"
   const sorted = [...names].sort((a, b) => b.length - a.length);
-
-  // Build a regex that matches any of the card names, but only in text nodes
-  // (not inside HTML tags). We split on tag boundaries and only process text runs.
   const escaped = sorted.map((n) =>
     n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
   );
   const nameRe = new RegExp(`(${escaped.join("|")})`, "g");
 
-  // Split the HTML into [text, tag, text, tag, ...] segments
-  // Tags are <...> — we only linkify the text segments.
   const TAG_RE = /(<[^>]+>)/g;
   const parts = html.split(TAG_RE);
 
   return parts
     .map((part, i) => {
-      // Odd indices are tags — leave them alone
       if (i % 2 === 1) return part;
-      // Even indices are text runs — linkify card names
       return part.replace(nameRe, (match) => {
         const safe = match.replace(/"/g, "&quot;");
         return `<span class="card-link" data-card="${safe}">${match}</span>`;
@@ -372,24 +418,19 @@ function markdownToHtml(text: string): string {
 
   let html = escaped;
 
-  // Headings
   html = html.replace(/^#### (.+)$/gm, "<h4>$1</h4>");
   html = html.replace(/^### (.+)$/gm, "<h3>$1</h3>");
   html = html.replace(/^## (.+)$/gm, "<h2>$1</h2>");
   html = html.replace(/^# (.+)$/gm, "<h1>$1</h1>");
 
-  // Horizontal rule
   html = html.replace(/^---+$/gm, "<hr/>");
 
-  // Bold and italic
   html = html.replace(/\*\*\*(.+?)\*\*\*/g, "<strong><em>$1</em></strong>");
   html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
   html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
 
-  // Inline code
   html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
 
-  // Bullet lists — consecutive "- " lines become <ul><li>
   html = html.replace(/((?:^[ \t]*[-*+] .+\n?)+)/gm, (match) => {
     const items = match
       .trim()
@@ -399,13 +440,11 @@ function markdownToHtml(text: string): string {
     return `<ul>${items}</ul>`;
   });
 
-  // Paragraphs — blank lines between text
   html = html
     .split(/\n{2,}/)
     .map((block) => {
       block = block.trim();
       if (!block) return "";
-      // Don't wrap block-level elements in <p>
       if (/^<(h[1-6]|ul|ol|li|hr|blockquote|pre|div)/.test(block)) return block;
       return `<p>${block.replace(/\n/g, "<br/>")}</p>`;
     })

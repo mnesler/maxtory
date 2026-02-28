@@ -8,7 +8,7 @@ import { createSignal, Show } from "solid-js";
 import DeckLoader from "./components/DeckLoader.jsx";
 import ChatWindow from "./components/ChatWindow.jsx";
 import CardTooltip from "./components/CardTooltip.jsx";
-import type { LoadDeckResponse, DeckCard, SessionInfo } from "./api/mtg.js";
+import type { LoadDeckResponse, DeckCard, SessionInfo, ResponseMode } from "./api/mtg.js";
 import { checkSession } from "./api/mtg.js";
 import "./styles.css";
 
@@ -16,17 +16,23 @@ import "./styles.css";
 // server-side session (and thus the same loadedDeck).
 const SESSION_ID = crypto.randomUUID();
 
+// ── Mode toggle config ─────────────────────────────────────────────────────────
+
+const MODES: { value: ResponseMode; label: string; title: string }[] = [
+  { value: "verbose",  label: "Full",   title: "Full explanations with detailed reasoning" },
+  { value: "succinct", label: "Snappy", title: "Shortest accurate answer, no padding" },
+  { value: "gooper",   label: "Gooper", title: "Gooper Mode — card art only, no text" },
+];
+
 export default function App() {
   const [deckInfo, setDeckInfo] = createSignal<LoadDeckResponse | null>(null);
-  const [sessionOk, setSessionOk] = createSignal<boolean | null>(null); // null=checking, true=ok, false=broken
+  const [sessionOk, setSessionOk] = createSignal<boolean | null>(null);
+  const [mode, setMode] = createSignal<ResponseMode>("succinct");
 
   async function handleDeckLoaded(response: LoadDeckResponse, _cards: DeckCard[]) {
     setDeckInfo(response);
     setSessionOk(null);
 
-    // Immediately verify the server-side session actually has the deck attached.
-    // This catches the most common failure mode: server was restarted between
-    // deck load and chat, so the in-memory session is gone.
     const info: SessionInfo | null = await checkSession(SESSION_ID);
     if (info?.hasDeck) {
       setSessionOk(true);
@@ -48,6 +54,20 @@ export default function App() {
         <div class="advisor-header-sub">
           AI-powered Commander deck analysis · Powered by RAG + Scryfall data
         </div>
+
+        {/* Mode toggle — always visible */}
+        <div class="mode-toggle" role="group" aria-label="Response mode">
+          {MODES.map((m) => (
+            <button
+              class={`mode-btn${mode() === m.value ? " mode-btn-active" : ""}${m.value === "gooper" ? " mode-btn-gooper" : ""}`}
+              title={m.title}
+              onClick={() => setMode(m.value)}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+
         {/* Session health indicator — only shown after a deck is loaded */}
         <Show when={deckInfo() !== null}>
           <div class="session-indicator">
@@ -89,6 +109,7 @@ export default function App() {
             deckLoaded={deckInfo() !== null && sessionOk() !== false}
             deckName={deckInfo()?.name}
             sessionBroken={sessionOk() === false}
+            mode={mode()}
           />
         </main>
       </div>
