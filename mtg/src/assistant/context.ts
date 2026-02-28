@@ -191,7 +191,8 @@ export function buildSystemPrompt(intent: Intent): string {
     "- If you reference a card, use its exact printed name.",
     "- For deck suggestions, explain WHY each card is recommended.",
     "- For combos, explain the combo pieces and how they interact step by step.",
-    "- Be concise but thorough. Use markdown formatting for readability.",
+    "- Be as succinct as possible. Shortest accurate answer wins — no padding, no preamble, no restating the question.",
+    "- Use markdown formatting for readability.",
     "- If you're unsure about something, say so — don't invent rules or card text.",
   ].join("\n");
 
